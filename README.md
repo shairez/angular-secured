@@ -1,4 +1,4 @@
-angular-security
+angular-secured
 ================
 
 Authentication &amp; Authorization for AngularJs

@@ -14,6 +14,7 @@ module.exports = function(config) {
 			'bower_components/jasmine-given/dist/jasmine-given.js',
 			'bower_components/angular/angular.js',
 			'bower_components/angular-mocks/angular-mocks.js',
+            'bower_components/angular-ui-router/release/angular-ui-router.js',
 			'src/scripts/**/*.mdl.js',
 			'src/scripts/**/*.js',
 			'src/scripts/**/*.mock.js',
@@ -24,10 +25,10 @@ module.exports = function(config) {
 		// list of files / patterns to exclude
 		exclude: [],
 
-		preprocessors: {
-			'**/src/scripts/**/!(*.test|*.mock).js': 'coverage'
-		},
-		reporters: ['progress','coverage'],
+//		preprocessors: {
+//			'**/src/scripts/**/!(*.test|*.mock).js': 'coverage'
+//		},
+//		reporters: ['progress','coverage'],
 
 		coverageReporter: {
 			type : 'text'

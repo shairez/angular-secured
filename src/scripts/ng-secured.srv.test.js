@@ -1,77 +1,81 @@
-describe("ngPersistence", function () {
+describe("ngSecured", function () {
 
-	var ngPersistence,
-		dataStore,
-		daoMock,
-		dataStoreCoreFactorySpy,
-		dateStoreCoreMock,
-		restGatewayFactorySpy,
-		restGatewayMock,
-		clientRestAdapterFactorySpy,
-		clientRestAdapterMock;
+	var ngSecured,
+        ngSecuredProvider,
+        $state,
+        $rootScope,
+        $stateProvider,
+        stateName = "testState",
+        loginStateName = "loginState";
 
-	beforeEach(module("ngPersistence",
-		"mocks.ngPersistence.services.daoFactory",
-		"mocks.ngPersistence.services.dataStoreCoreFactory",
-		"mocks.ngPersistence.services.restGatewayFactory",
-		"mocks.ngPersistence.clientRestAdapters.clientRestAdapterFactory"
-	));
+	beforeEach(module("ngSecured"));
 
-	beforeEach(inject(["ngPersistence",
-		"ngPersistence.services.daoFactory",
-		"ngPersistence.services.dataStoreCoreFactory",
-		"ngPersistence.services.restGatewayFactory",
-		"ngPersistence.clientRestAdapters.clientRestAdapterFactory",
-		function (_ngPersistence,
-		          daoFactory,
-		          dataStoreCoreFactory,
-		          restGatewayFactory,
-		          clientRestAdapterFactory) {
-			ngPersistence = _ngPersistence;
+    beforeEach(module(function(_ngSecuredProvider_, _$stateProvider_){
+        $stateProvider = _$stateProvider_;
+        ngSecuredProvider = _ngSecuredProvider_;
+    }));
 
-			dataStoreCoreFactorySpy = dataStoreCoreFactory;
-			dateStoreCoreMock = dataStoreCoreFactorySpy();
-			dataStoreCoreFactorySpy.reset();
+	beforeEach(inject(["ngSecured",
+                       "$state",
+                       "$rootScope",
+		function (_ngSecured,
+                    _$state,
+                    _$rootScope) {
+            ngSecured = _ngSecured;
+            $state = _$state;
+            $rootScope = _$rootScope;
+	}]));
 
-			daoFactorySpy = daoFactory;
-			daoMock = daoFactorySpy();
-			daoFactorySpy.reset();
+    describe("transitioning to a state", function () {
+        When(function(){
+            $rootScope.$apply(function(){
+                $state.go(stateName);
+            });
+        });
 
-			restGatewayFactorySpy = restGatewayFactory;
-			restGatewayMock = restGatewayFactorySpy();
-			restGatewayFactorySpy.reset();
+        describe("insecure state", function () {
+            Given(function(){ $stateProvider.state(stateName, {}); });
+            Then(function(){ expect($state.current.name).toBe( stateName ); });
+        });
 
-			clientRestAdapterFactorySpy = clientRestAdapterFactory;
-			clientRestAdapterMock = clientRestAdapterFactorySpy();
-			clientRestAdapterFactorySpy.reset();
+        describe("secure state", function () {
+            Given(function(){ $stateProvider.state(stateName, {secure: {} }); });
 
-		}]));
+            describe("no login state configured", function () {
+                Then(function(){
+                    expect($state.current.name).toBe( ngSecured.defaultStateNames.NOT_AUTHENTICATED );
+                });
+            });
+            describe("login state is configured", function () {
+                Given(function(){
+                    ngSecuredProvider.configAuth({
+                        loginState: loginStateName
+                    });
+                    $stateProvider.state(loginStateName, {});
+                });
+                Then(function(){ expect($state.current.name).toBe( loginStateName ); });
 
-	describe("should create a data store", function () {
-		var baseUrl,
-			serverRestAdapter;
 
-		Given(function () {
-			baseUrl = "/api";
-			serverRestAdapter = {};
-		});
-		When(function () {
-			dataStore = ngPersistence.createDataStore(baseUrl, clientRestAdapterFactorySpy, serverRestAdapter)
-		});
-		Then(function () {
-			expect(clientRestAdapterFactorySpy).toHaveBeenCalledWith(baseUrl);
-			expect(dataStoreCoreFactorySpy).toHaveBeenCalledWith(restGatewayMock);
-			expect(restGatewayFactorySpy).toHaveBeenCalledWith(clientRestAdapterMock, serverRestAdapter);
-		});
+                describe("if not authenticated", function () {
+                    Given(function(){ ngSecuredProvider.configAuth({
+                            isAuthenticated: function(){ return false; }
+                            })
+                    });
+                    Then(function(){ expect($state.current.name).toBe( loginStateName ); });
+                });
 
-		describe("dataStore should create a DAO", function () {
-			When(function () {
-				dao = dataStore.createDAO();
-			});
-			Then(function () {
-				expect(daoFactorySpy).toHaveBeenCalled();
-			});
-		});
-	});
+                describe("if authenticated", function () {
+                    Given(function(){ ngSecuredProvider.configAuth({
+                        isAuthenticated: function(){ return true; }
+                        })
+                    });
+                    Then(function(){ expect($state.current.name).toBe( stateName ); });
+                });
+            });
+
+
+
+        });
+    });
 
 });

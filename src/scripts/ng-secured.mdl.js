@@ -1,2 +1,1 @@
-angular.module('ngSecured', []);
-
+angular.module('ngSecured', ["ui.router"]);

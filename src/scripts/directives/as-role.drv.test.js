@@ -38,7 +38,7 @@ describe("asRole directive", function () {
             Then(function(){ expect(element.children().length).toBe(0); });
 	    });
 
-	    ddescribe("user is admin, should show dom ", function () {
+	    describe("user is admin, should show dom ", function () {
 		    Given(function(){
 			    ngSecured.includeRole.andCallFake(function(role){
 				    return role === 'admin';

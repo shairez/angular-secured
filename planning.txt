@@ -1,10 +1,17 @@
+TODO:
+
+1. inherit state "secured" property (decorator like 'data' on config)
+2.
+
+
 
 security guards
 
 path guard - asks questions...
     is this path secured?
-    show me an access car (temp id)...
+    show me an access card (temp id)...
     is this person allowed in this path?
+
 
 
 render guard -
@@ -13,59 +20,7 @@ render guard -
 http guard
 should you be allowed to see this data?
 
-
 login phase -
 
 login http request -> response logic -> roles, permissions, (token / session id)
-
-
-
-ngSecuredProvider.configAuth = {
-
-    pages: {
-        login: "app.login",
-        unAuthorized: "app.unauth"
-
-    },
-    authenticating: function($http, ngSecured){
-
-        return $http.get("/loginUrl", ngSecured.credentials).then(function(data){
-            ngSecured.setToken(data.token);
-            ngSecured.setPermissions(data.permissions);
-            ngSecured.setRoles(data.roles);
-        });
-
-    },
-
-
-    loginUrl: "/login",
-    authorizing: function(){
-
-    }
-}
-
-<div ngs-show-if-role="admin">
-
-</div>
-
-
-
-directive("ngsShowIfRole", function(ngSecured.userProfile){
-
-
-    return {
-        compile: function(){
-
-            if (userProfile.role === attrs.ngsShowIfRole){
-                add ngIf=false
-            }
-        },
-        link: function(){
-
-
-        }
-    }
-
-})
-
 

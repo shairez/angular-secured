@@ -38,16 +38,16 @@ angular.module("ngSecured")
             initVars();
 
             $rootScope.$on("$stateChangeStart", function(event, toState, toParams){
-                if (!!toState.secure){
+                if (!!toState.secured){
 
                     if (!config.isAuthenticated()){
                         event.preventDefault();
                         lastStateName = toState.name;
                         lastStateParams = toParams;
                         $state.go(config.loginState);
-                    }else if (toState.secure.hasOwnProperty("role")){
+                    }else if (toState.secured.hasOwnProperty("role")){
 
-                        if (!roles || roles.indexOf(toState.secure.role)){
+                        if (!roles || roles.indexOf(toState.secured.role)){
 
                             event.preventDefault();
                             $state.go(config.unAuthorizedState);

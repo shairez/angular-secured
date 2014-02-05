@@ -9,7 +9,7 @@ describe("ngSecured", function () {
         stateName = "testState",
         stateParams = {sectionId: '1'},
         loginStateName = "loginState",
-        secureState = {secure: {}, url:"/:sectionId" };
+        secureState = {secured: {}, url:"/:sectionId" };
 
 	beforeEach(module("ngSecured"));
 
@@ -98,7 +98,7 @@ describe("ngSecured", function () {
 
                     describe("and state is secured with a role", function () {
                         Given(function(){
-                            secureState.secure.role = "admin";
+                            secureState.secured.role = "admin";
                         });
 
                         describe("if user not authorized", function () {

@@ -12,7 +12,7 @@ module.exports = function (grunt) {
 		yeoman: {
 			app: 'src',
 			dist: 'dist',
-			distFileName: 'angular-security'
+			distFileName: 'angular-secured'
 		},
 
 		clean: {

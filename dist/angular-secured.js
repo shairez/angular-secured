@@ -1,3 +1,4 @@
+angular.module('ngSecured', ["ui.router"]);
 angular.module("ngSecured")
 .directive("asRole", ["ngSecured", "$animate",
                        function(ngSecured, $animate){
@@ -38,7 +39,6 @@ angular.module("ngSecured")
             }
         }
     }])
-angular.module('ngSecured', ["ui.router"]);
 angular.module("ngSecured")
     .provider("ngSecured", ["$stateProvider", function ($stateProvider) {
 

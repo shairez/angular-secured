@@ -144,11 +144,11 @@ describe("ngSecured", function () {
 
     describe("include role", function () {
         Given(function(){ ngSecured.setRoles(['admin']); });
-        Then(function(){ expect(ngSecured.includeRole('admin')).toBe(true); });
+        Then(function(){ expect(ngSecured.includesRole('admin')).toBe(true); });
     });
 
     describe("doesn't include a role", function () {
-        Then(function(){ expect(ngSecured.includeRole('admin')).toBe(false); });
+        Then(function(){ expect(ngSecured.includesRole('admin')).toBe(false); });
     });
 
 

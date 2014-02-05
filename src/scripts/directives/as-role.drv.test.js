@@ -28,19 +28,29 @@ describe("asRole directive", function () {
         scope.$apply();
     }
 
-    describe("asRole should show dom if role is correct", function () {
+    describe("asRole is set to admin", function () {
 
-        Given(function(){
 
-            ngSecured.includeRole.andReturn('admin');
+	    describe("user is not an admin, should not show the dom", function () {
+		    Given(function(){
+			    makeAsRole('admin');
+		    });
+            Then(function(){ expect(element.children().length).toBe(0); });
+	    });
 
-            makeAsRole('admin');
-
-            console.log("element", element );
-        });
-
-        Then(function(){ expect(element.children().length).toBe(0); });
+	    ddescribe("user is admin, should show dom ", function () {
+		    Given(function(){
+			    ngSecured.includeRole.andCallFake(function(role){
+				    return role === 'admin';
+			    });
+			    makeAsRole('admin');
+		    });
+		    Then(function(){ expect(element.children().length).toBe(1); });
+	    });
      });
+
+
+
 
 
 

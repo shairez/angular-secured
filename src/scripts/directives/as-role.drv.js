@@ -9,7 +9,8 @@ angular.module("ngSecured")
             $$tlb: true,
             link: function($scope, $element, $attrs, ctrl, $transclude){
                 var block, childScope;
-                $scope.$watch($attrs.asRole, function(newVal){
+
+                $scope.$watch(function(){return $attrs.asRole;}, function(newVal){
 
                     if (ngSecured.includeRole(newVal)){
 

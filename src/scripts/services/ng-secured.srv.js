@@ -98,7 +98,7 @@ angular.module("ngSecured")
                     return roles;
                 },
 
-                includeRole: function(role){
+                includesRole: function(role){
                     if (roles && roles.indexOf(role) !== -1){
                         return true;
                     }

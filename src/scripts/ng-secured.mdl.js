@@ -1,1 +1,1 @@
-angular.module('ngSecured', ["ui.router"]);
+angular.module('ngSecured', ["ui.router"]).run(["ngSecured", function(ngSecured){}] );

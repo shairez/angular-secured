@@ -1,4 +1,5 @@
-angular.module('ngSecured', ["ui.router"]);
+angular.module('ngSecured', ["ui.router"]).run(["ngSecured", function(ngSecured){}] );
+
 angular.module("ngSecured")
 .directive("asRole", ["ngSecured", "$animate",
                        function(ngSecured, $animate){
@@ -60,7 +61,7 @@ angular.module("ngSecured")
         $stateProvider.state(defaultStateNames.NOT_AUTHORIZED, {views: {"@": {template: "You are not authorized to see this page."}}});
 
 
-        this.configAuth = function(userConfig){
+        this.secure = function(userConfig){
             angular.extend(config, userConfig);
 
         }
@@ -79,16 +80,16 @@ angular.module("ngSecured")
             initVars();
 
             $rootScope.$on("$stateChangeStart", function(event, toState, toParams){
-                if (!!toState.secure){
+                if (!!toState.secured){
 
                     if (!config.isAuthenticated()){
                         event.preventDefault();
                         lastStateName = toState.name;
                         lastStateParams = toParams;
                         $state.go(config.loginState);
-                    }else if (toState.secure.hasOwnProperty("role")){
+                    }else if (toState.secured.hasOwnProperty("role")){
 
-                        if (!roles || roles.indexOf(toState.secure.role)){
+                        if (!roles || roles.indexOf(toState.secured.role)){
 
                             event.preventDefault();
                             $state.go(config.unAuthorizedState);

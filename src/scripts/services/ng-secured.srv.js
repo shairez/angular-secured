@@ -19,7 +19,7 @@ angular.module("ngSecured")
         $stateProvider.state(defaultStateNames.NOT_AUTHORIZED, {views: {"@": {template: "You are not authorized to see this page."}}});
 
 
-        this.configAuth = function(userConfig){
+        this.secure = function(userConfig){
             angular.extend(config, userConfig);
 
         }

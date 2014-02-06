@@ -55,7 +55,7 @@ describe("ngSecured", function () {
             });
             describe("login state is configured", function () {
                 Given(function(){
-                    ngSecuredProvider.configAuth({
+                    ngSecuredProvider.secure({
                         loginState: loginStateName
                     });
                     $stateProvider.state(loginStateName, {});
@@ -65,7 +65,7 @@ describe("ngSecured", function () {
 
                 describe("if not authenticated", function () {
                     Given(function(){
-                        ngSecuredProvider.configAuth({
+                        ngSecuredProvider.secure({
                             isAuthenticated: function(){ return false; },
                             login: function(){}
                         })
@@ -75,7 +75,7 @@ describe("ngSecured", function () {
                     describe("but after login, should continue to the last state and params", function () {
 
                         When(function(){
-                            ngSecuredProvider.configAuth({
+                            ngSecuredProvider.secure({
                                 isAuthenticated: function(){ return true; }
                             })
                             ngSecured.login();
@@ -90,7 +90,7 @@ describe("ngSecured", function () {
                 });
 
                 describe("if authenticated", function () {
-                    Given(function(){ ngSecuredProvider.configAuth({
+                    Given(function(){ ngSecuredProvider.secure({
                         isAuthenticated: function(){ return true; }
                         })
                     });
@@ -162,7 +162,7 @@ describe("ngSecured", function () {
             var credentials = {username: "david", password: "1234"};
 
             Given(function(){
-                ngSecuredProvider.configAuth({
+                ngSecuredProvider.secure({
                     login: function(credentials){}
                 })
             });
@@ -176,7 +176,7 @@ describe("ngSecured", function () {
             describe("should pass the credentials to the actual login function", function () {
                 var passedCreds;
                 Given(function(){
-                    ngSecuredProvider.configAuth({
+                    ngSecuredProvider.secure({
                         login: function(credentials){
                             passedCreds = credentials;
                         }
@@ -188,7 +188,7 @@ describe("ngSecured", function () {
             describe("should set roles from login invoke result", function () {
                 describe("login return a value", function () {
                     Given(function(){
-                        ngSecuredProvider.configAuth({
+                        ngSecuredProvider.secure({
                             login: function(){
                                 return "admin";
                             }
@@ -198,7 +198,7 @@ describe("ngSecured", function () {
                 });
                 describe("login return a promise", function () {
                     Given(function(){
-                        ngSecuredProvider.configAuth({
+                        ngSecuredProvider.secure({
                             login: function(){
                                 var defer = $q.defer();
                                 defer.resolve("admin");
@@ -217,7 +217,7 @@ describe("ngSecured", function () {
             describe("post login state is defined", function () {
                 Given(function(){
                     $stateProvider.state(stateName, {});
-                    ngSecuredProvider.configAuth({
+                    ngSecuredProvider.secure({
                         postLoginState: stateName
                     });
                     ngSecured._initVars();

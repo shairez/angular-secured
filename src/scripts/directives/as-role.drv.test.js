@@ -40,7 +40,7 @@ describe("asRole directive", function () {
 
 	    describe("user is admin, should show dom ", function () {
 		    Given(function(){
-			    ngSecured.includeRole.andCallFake(function(role){
+			    ngSecured.includesRole.andCallFake(function(role){
 				    return role === 'admin';
 			    });
 			    makeAsRole('admin');

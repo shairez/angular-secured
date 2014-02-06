@@ -12,7 +12,7 @@ angular.module("ngSecured")
 
                 $scope.$watch(function(){return $attrs.asRole;}, function(newVal){
 
-                    if (ngSecured.includeRole(newVal)){
+                    if (ngSecured.includesRole(newVal)){
 
                         if (!childScope){
                             childScope = $scope.$new();

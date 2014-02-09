@@ -116,6 +116,23 @@ describe("ngSecured", function () {
         });
     });
 
+    describe("isAuthenticated should be able to inject dependencies", function () {
+        var $qInjection;
+
+        Given(function(){
+            ngSecuredProvider.secure({
+                isAuthenticated: [
+                    "$q",
+                    function($q){
+                        $qInjection = $q;
+                    }
+                ]
+            })
+        });
+        When(function(){ ngSecured.isAuthenticated(); });
+        Then(function(){ expect($qInjection).toBe($q) });
+    });
+
     describe("set roles", function () {
         var roles;
 
@@ -183,6 +200,19 @@ describe("ngSecured", function () {
                     })
                 });
                 Then(function(){ expect(passedCreds).toBe(credentials); });
+            });
+
+            describe("should inject dependencies", function () {
+                var $qInjection;
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        login: ["credentials", "$q", function(credentials, $q){
+                            passedCreds = credentials;
+                            $qInjection = $q;
+                        }]
+                    })
+                });
+                Then(function(){ expect($qInjection).toBe($q) });
             });
 
             describe("should set roles from login invoke result", function () {

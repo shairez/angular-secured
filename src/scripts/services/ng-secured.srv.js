@@ -10,7 +10,9 @@ angular.module("ngSecured")
             config = {
                 loginState: defaultStateNames.NOT_AUTHENTICATED,
                 unAuthorizedState: defaultStateNames.NOT_AUTHORIZED,
-                isAuthenticated: function(){ return false},
+                isAuthenticated: function () {
+                    return false
+                },
                 postLoginState: defaultStateNames.NOT_AUTHENTICATED
             };
 
@@ -19,93 +21,99 @@ angular.module("ngSecured")
         $stateProvider.state(defaultStateNames.NOT_AUTHORIZED, {views: {"@": {template: "You are not authorized to see this page."}}});
 
 
-        this.secure = function(userConfig){
+        this.secure = function (userConfig) {
             angular.extend(config, userConfig);
 
         }
 
-        this.$get = ["$rootScope", "$state", "$q",
-                      function ($rootScope, $state, $q) {
+        this.$get = ["$rootScope", "$state", "$q", "$injector",
+            function ($rootScope, $state, $q, $injector) {
 
-            var lastStateName,
-                lastStateParams,
-                roles;
+                var lastStateName,
+                    lastStateParams,
+                    roles;
 
-            function initVars(){
-                lastStateName = config.postLoginState;
-            }
+                function initVars() {
+                    lastStateName = config.postLoginState;
+                }
 
-            initVars();
+                initVars();
 
-            $rootScope.$on("$stateChangeStart", function(event, toState, toParams){
-                if (!!toState.secured){
+                $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
+                    if (!!toState.secured) {
 
-                    if (!config.isAuthenticated()){
-                        event.preventDefault();
-                        lastStateName = toState.name;
-                        lastStateParams = toParams;
-                        $state.go(config.loginState);
-                    }else if (toState.secured.hasOwnProperty("role")){
-
-                        if (!roles || roles.indexOf(toState.secured.role)){
-
+                        if (!config.isAuthenticated()) {
                             event.preventDefault();
-                            $state.go(config.unAuthorizedState);
+                            lastStateName = toState.name;
+                            lastStateParams = toParams;
+                            $state.go(config.loginState);
+                        } else if (toState.secured.hasOwnProperty("role")) {
+
+                            if (!roles || roles.indexOf(toState.secured.role)) {
+
+                                event.preventDefault();
+                                $state.go(config.unAuthorizedState);
+                            }
                         }
                     }
+                })
+
+                function goToLastState() {
+                    if (lastStateName) {
+                        $state.go(lastStateName, lastStateParams);
+                    }
                 }
-            })
 
-            function goToLastState(){
-                if (lastStateName){
-                    $state.go(lastStateName, lastStateParams);
-                }
-            }
+                return {
+                    defaultStateNames: defaultStateNames,
+                    _initVars: initVars,
 
-            return {
-                defaultStateNames: defaultStateNames,
-                _initVars: initVars,
+                    login: function (credentials) {
 
-                login: function(credentials){
+                        if (!config.login) {
+                            throw new Error("login function must be configured");
+                        } else {
+                            var rolesPossiblePromise = $injector.invoke(config.login, config, {credentials: credentials});
 
-                    if (!config.login || !angular.isFunction(config.login)){
-                        throw new Error("login function must be configured");
-                    }else{
-                        var rolesPossiblePromise = config.login(credentials);
-                        var that = this;
-                        $q.when(rolesPossiblePromise).then(
-                            function(rolesValue){
-                                if (rolesValue){
-                                    that.setRoles(rolesValue);
+
+                            var that = this;
+                            $q.when(rolesPossiblePromise).then(
+                                function (rolesValue) {
+                                    if (rolesValue) {
+                                        that.setRoles(rolesValue);
+                                    }
+                                    goToLastState();
                                 }
-                                goToLastState();
-                            }
-                        )
-                    }
-                },
+                            )
+                        }
+                    },
 
-                setRoles: function(rolesValue){
-                    if (angular.isString(rolesValue)){
-                        roles = [rolesValue];
-                    }else if(!angular.isArray(rolesValue)){
-                        throw new Error("roles must be a String or an Array");
-                    }else{
-                        roles = rolesValue;
-                    }
-                },
+                    isAuthenticated: function () {
+                        return $injector.invoke(config.isAuthenticated);
+                    },
 
-                getRoles: function(){
-                    return roles;
-                },
+                    setRoles: function (rolesValue) {
+                        if (angular.isString(rolesValue)) {
+                            roles = [rolesValue];
+                        } else if (!angular.isArray(rolesValue)) {
+                            throw new Error("roles must be a String or an Array");
+                        } else {
+                            roles = rolesValue;
+                        }
+                    },
 
-                includesRole: function(role){
-                    if (roles && roles.indexOf(role) !== -1){
-                        return true;
+                    getRoles: function () {
+                        return roles;
+                    },
+
+                    includesRole: function (role) {
+                        if (roles && roles.indexOf(role) !== -1) {
+                            return true;
+                        }
+                        return false;
                     }
-                    return false;
+
+
                 }
-
-
-            }
-        }];
+            }];
     }])

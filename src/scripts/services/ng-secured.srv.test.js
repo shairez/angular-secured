@@ -72,11 +72,13 @@ describe("ngSecured", function () {
                     });
                     Then(function(){ expect($state.current.name).toBe( loginStateName ); });
 
+
                     describe("but after login, should continue to the last state and params", function () {
 
                         When(function(){
                             ngSecuredProvider.secure({
-                                isAuthenticated: function(){ return true; }
+                                isAuthenticated: function(){ return true; },
+                                login: function(){ return "admin"; }
                             })
                             ngSecured.login();
                             $rootScope.$apply();
@@ -91,7 +93,7 @@ describe("ngSecured", function () {
 
                 describe("if authenticated", function () {
                     Given(function(){ ngSecuredProvider.secure({
-                        isAuthenticated: function(){ return true; }
+                        isAuthenticated: [function(){ return true; }]
                         })
                     });
                     Then(function(){ expect($state.current.name).toBe( stateName ); });
@@ -215,7 +217,22 @@ describe("ngSecured", function () {
                 Then(function(){ expect($qInjection).toBe($q) });
             });
 
+            describe("login return undefined, should remain in login", function () {
+                var error;
+                When(function(){
+                    $rootScope.$apply(function(){
+                        ngSecured.login().then(null,function(reason){
+                            error = reason;
+                        })
+                    })
+                });
+                Then(function(){
+                    expect(error).toBe( "No promise was returned from login" );
+                });
+            });
+
             describe("should set roles from login invoke result", function () {
+
                 describe("login return a value", function () {
                     Given(function(){
                         ngSecuredProvider.secure({

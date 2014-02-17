@@ -42,7 +42,7 @@ angular.module("ngSecured")
                 $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
                     if (!!toState.secured) {
 
-                        if (!config.isAuthenticated()) {
+                        if (!isAuthenticated()) {
                             event.preventDefault();
                             lastStateName = toState.name;
                             lastStateParams = toParams;
@@ -64,6 +64,10 @@ angular.module("ngSecured")
                     }
                 }
 
+                function isAuthenticated(){
+                    return $injector.invoke(config.isAuthenticated);
+                }
+
                 return {
                     defaultStateNames: defaultStateNames,
                     _initVars: initVars,
@@ -75,22 +79,25 @@ angular.module("ngSecured")
                         } else {
                             var rolesPossiblePromise = $injector.invoke(config.login, config, {credentials: credentials});
 
-
-                            var that = this;
-                            $q.when(rolesPossiblePromise).then(
-                                function (rolesValue) {
-                                    if (rolesValue) {
-                                        that.setRoles(rolesValue);
+                            if (rolesPossiblePromise){
+                                var that = this;
+                                return $q.when(rolesPossiblePromise).then(
+                                    function (rolesValue) {
+                                        if (rolesValue) {
+                                            that.setRoles(rolesValue);
+                                        }
+                                        goToLastState();
+                                        return rolesValue;
                                     }
-                                    goToLastState();
-                                }
-                            )
+                                )
+                            }
+                            goToLastState();
+                            return $q.reject("No promise was returned from login");
+
                         }
                     },
 
-                    isAuthenticated: function () {
-                        return $injector.invoke(config.isAuthenticated);
-                    },
+                    isAuthenticated: isAuthenticated,
 
                     setRoles: function (rolesValue) {
                         if (angular.isString(rolesValue)) {

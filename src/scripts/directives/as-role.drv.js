@@ -8,11 +8,32 @@ angular.module("ngSecured")
             restrict: 'A',
             $$tlb: true,
             link: function($scope, $element, $attrs, ctrl, $transclude){
-                var block, childScope;
+                var block, childScope,
+                    role;
 
-                $scope.$watch(function(){return $attrs.asRole;}, function(newVal){
+                function getBlockElements(nodes) {
+                    var startNode = nodes[0],
+                        endNode = nodes[nodes.length - 1];
+                    if (startNode === endNode) {
+                        return angular.element(startNode);
+                    }
 
-                    if (ngSecured.includesRole(newVal)){
+                    var element = startNode;
+                    var elements = [element];
+
+                    do {
+                        element = element.nextSibling;
+                        if (!element) break;
+                        elements.push(element);
+                    } while (element !== endNode);
+
+                    return angular.element(elements);
+                }
+
+                function invalidateDom(){
+                    console.log("role", role);
+                    console.log("getRoles", ngSecured.getRoles());
+                    if (ngSecured.includesRole(role)){
 
                         if (!childScope){
                             childScope = $scope.$new();
@@ -32,9 +53,14 @@ angular.module("ngSecured")
                             childScope = null;
                         }
                     }
+                }
 
-
-                })
+                // TODO: consider changing to $observe
+                $scope.$watch(function(){return $attrs.asRole;}, function(newVal){
+                    role = newVal;
+                    invalidateDom();
+                });
+                $scope.$watch(function(){return ngSecured.getRoles();}, invalidateDom);
             }
         }
     }])

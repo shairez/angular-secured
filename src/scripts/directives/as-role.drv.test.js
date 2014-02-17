@@ -28,26 +28,55 @@ describe("asRole directive", function () {
         scope.$apply();
     }
 
-    describe("asRole is set to admin", function () {
+    function expectDomToBeAdded(){
+        expect(element.children().length).toBe(1);
+    }
+    function expectDomToBeRemoved(){
+        expect(element.children().length).toBe(0);
+    }
 
+    describe("user has no roles", function () {
 
-	    describe("user is not an admin, should not show the dom", function () {
-		    Given(function(){
-			    makeAsRole('admin');
-		    });
-            Then(function(){ expect(element.children().length).toBe(0); });
-	    });
+        Then(function(){ expectDomToBeRemoved(); });
 
-	    describe("user is admin, should show dom ", function () {
-		    Given(function(){
-			    ngSecured.includesRole.andCallFake(function(role){
-				    return role === 'admin';
-			    });
-			    makeAsRole('admin');
-		    });
-		    Then(function(){ expect(element.children().length).toBe(1); });
+	    describe("asRole is set to admin, should not show the dom", function () {
+            Given(function(){
+                makeAsRole('admin');
+            });
+            Then(function(){ expectDomToBeRemoved(); });
 	    });
      });
+
+    describe("user has roles", function () {
+
+        describe("user is admin, should show dom ", function () {
+            Given(function(){
+                ngSecured.includesRole.andCallFake(function(role){
+                    return role === 'admin';
+                });
+                makeAsRole('admin');
+            });
+            Then(function(){ expectDomToBeAdded(); });
+        });
+
+        describe("roles are updated, directive should listen", function () {
+            Given(function(){
+                ngSecured.getRoles.andReturn(undefined);
+                makeAsRole('admin');
+            });
+            Then(function(){
+                expectDomToBeRemoved();
+                ngSecured.getRoles.andReturn(['admin']);
+                console.log("beforeApply", element);
+                $rootScope.$apply();
+                console.log("afterApply", element);
+                expectDomToBeAdded();
+            });
+        });
+
+    });
+
+
 
 
 

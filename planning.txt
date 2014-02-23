@@ -1,7 +1,8 @@
 TODO:
 
 1. inherit state "secured" property (decorator like 'data' on config)
-2.
+2. add "fetchingRoles" to config, remove assumption about getting roles from login
+    and return the actual login promise
 
 
 

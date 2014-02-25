@@ -33,10 +33,7 @@ angular.module("ngSecured")
                 }
 
                 function invalidateDom(){
-                    console.log("role", role);
-                    console.log("getRoles", ngSecured.getRoles());
                     if (ngSecured.includesRole(role)){
-
                         if (!childScope){
                             childScope = $scope.$new();
                             $transclude(childScope, function(clone){

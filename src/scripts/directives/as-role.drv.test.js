@@ -4,7 +4,7 @@ describe("asRole directive", function () {
         $compile,
         scope,
         element,
-        _ngSecured;
+        ngSecured;
 
 	beforeEach(module("ngSecured",
                       "mocks.ngSecured"));
@@ -51,9 +51,7 @@ describe("asRole directive", function () {
 
         describe("user is admin, should show dom ", function () {
             Given(function(){
-                ngSecured.includesRole.andCallFake(function(role){
-                    return role === 'admin';
-                });
+                ngSecured.includesRole.andReturn(true);
                 makeAsRole('admin');
             });
             Then(function(){ expectDomToBeAdded(); });
@@ -62,14 +60,14 @@ describe("asRole directive", function () {
         describe("roles are updated, directive should listen", function () {
             Given(function(){
                 ngSecured.getRoles.andReturn(undefined);
+	            ngSecured.includesRole.andReturn(false);
                 makeAsRole('admin');
             });
             Then(function(){
                 expectDomToBeRemoved();
-                ngSecured.getRoles.andReturn(['admin']);
-                console.log("beforeApply", element);
+	            ngSecured.includesRole.andReturn(true);
+	            ngSecured.getRoles.andReturn(['admin']);
                 $rootScope.$apply();
-                console.log("afterApply", element);
                 expectDomToBeAdded();
             });
         });

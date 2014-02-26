@@ -116,6 +116,18 @@ describe("ngSecured", function () {
                 });
             });
         });
+
+	    describe("should fetch roles", function () {
+		    Given(function(){
+			    $stateProvider.state(stateName, {});
+			    ngSecuredProvider.secure({
+				    fetchRoles: function(){
+					    return "admin";
+				    }
+			    })
+		    });
+		    Then(function(){ expect(ngSecured.getRoles()).toEqual(['admin']) });
+	    });
     });
 
     describe("isAuthenticated should be able to inject dependencies", function () {
@@ -217,36 +229,22 @@ describe("ngSecured", function () {
                 Then(function(){ expect($qInjection).toBe($q) });
             });
 
-            describe("login return undefined, should remain in login", function () {
-                var error;
-                When(function(){
-                    $rootScope.$apply(function(){
-                        ngSecured.login().then(null,function(reason){
-                            error = reason;
-                        })
-                    })
-                });
-                Then(function(){
-                    expect(error).toBe( "No promise was returned from login" );
-                });
-            });
-
             describe("should set roles from login invoke result", function () {
 
-                describe("login return a value", function () {
+                describe("fetchRoles return a value", function () {
                     Given(function(){
                         ngSecuredProvider.secure({
-                            login: function(){
+	                        fetchRoles: function(){
                                 return "admin";
                             }
                         })
                     });
                     Then(function(){ expect(ngSecured.getRoles()).toEqual(['admin']) });
                 });
-                describe("login return a promise", function () {
+                describe("fetchRoles return a promise", function () {
                     Given(function(){
                         ngSecuredProvider.secure({
-                            login: function(){
+	                        fetchRoles: function(){
                                 var defer = $q.defer();
                                 defer.resolve("admin");
                                 return defer.promise;

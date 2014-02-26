@@ -13,7 +13,8 @@ angular.module("ngSecured")
                 isAuthenticated: function () {
                     return false
                 },
-                postLoginState: defaultStateNames.NOT_AUTHENTICATED
+                postLoginState: defaultStateNames.NOT_AUTHENTICATED,
+	            fetchRoles: undefined
             };
 
         $stateProvider.state(defaultStateNames.BASE_STATE, {});
@@ -40,17 +41,20 @@ angular.module("ngSecured")
                 initVars();
 
                 $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
-                    if (!!toState.secured) {
+
+	                // TODO: add fetchingRoles promise.then listener to handle flow sync of state transition
+	                fetchingRoles();
+
+	                if (!!toState.secured) {
 
                         if (!isAuthenticated()) {
-                            event.preventDefault();
+	                        event.preventDefault();
                             lastStateName = toState.name;
                             lastStateParams = toParams;
                             $state.go(config.loginState);
                         } else if (toState.secured.hasOwnProperty("role")) {
 
                             if (!roles || roles.indexOf(toState.secured.role)) {
-
                                 event.preventDefault();
                                 $state.go(config.unAuthorizedState);
                             }
@@ -64,9 +68,36 @@ angular.module("ngSecured")
                     }
                 }
 
+	            function fetchingRoles(){
+		            if (config.fetchRoles){
+			            var rolesFetchResult = config.fetchRoles();
+			            if (rolesFetchResult){
+				            return $q.when(rolesFetchResult).then(
+					            function (rolesValue) {
+						            if (rolesValue) {
+							            setRoles(rolesValue);
+						            }
+						            return rolesValue;
+					            }
+				            )
+			            }
+		            }
+		            return $q.reject("fetchRoles is not defined");
+	            }
+
                 function isAuthenticated(){
                     return $injector.invoke(config.isAuthenticated);
                 }
+
+	            function setRoles(rolesValue) {
+		            if (angular.isString(rolesValue)) {
+			            roles = [rolesValue];
+		            } else if (!angular.isArray(rolesValue)) {
+			            throw new Error("roles must be a String or an Array");
+		            } else {
+			            roles = rolesValue;
+		            }
+	            }
 
                 return {
                     defaultStateNames: defaultStateNames,
@@ -77,37 +108,17 @@ angular.module("ngSecured")
                         if (!config.login) {
                             throw new Error("login function must be configured");
                         } else {
-                            var rolesPossiblePromise = $injector.invoke(config.login, config, {credentials: credentials});
+                            var loginResult = $injector.invoke(config.login, config, {credentials: credentials});
 
-                            if (rolesPossiblePromise){
-                                var that = this;
-                                return $q.when(rolesPossiblePromise).then(
-                                    function (rolesValue) {
-                                        if (rolesValue) {
-                                            that.setRoles(rolesValue);
-                                        }
-                                        goToLastState();
-                                        return rolesValue;
-                                    }
-                                )
-                            }
+	                        this.fetchingRoles();
                             goToLastState();
-                            return $q.reject("No promise was returned from login");
-
+	                        return loginResult;
                         }
                     },
 
                     isAuthenticated: isAuthenticated,
 
-                    setRoles: function (rolesValue) {
-                        if (angular.isString(rolesValue)) {
-                            roles = [rolesValue];
-                        } else if (!angular.isArray(rolesValue)) {
-                            throw new Error("roles must be a String or an Array");
-                        } else {
-                            roles = rolesValue;
-                        }
-                    },
+                    setRoles: setRoles,
 
                     getRoles: function () {
                         return roles;
@@ -118,8 +129,8 @@ angular.module("ngSecured")
                             return true;
                         }
                         return false;
-                    }
-
+                    },
+	                fetchingRoles: fetchingRoles
 
                 }
             }];

@@ -70,7 +70,8 @@ angular.module("ngSecured")
 
 	            function fetchingRoles(){
 		            if (config.fetchRoles){
-			            var rolesFetchResult = config.fetchRoles();
+			            var rolesFetchResult = $injector.invoke(config.fetchRoles);
+
 			            if (rolesFetchResult){
 				            return $q.when(rolesFetchResult).then(
 					            function (rolesValue) {

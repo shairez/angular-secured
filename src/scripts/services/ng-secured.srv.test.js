@@ -273,6 +273,39 @@ describe("ngSecured", function () {
         });
     });
 
+	describe("Fetching Roles", function () {
+		var result, errorResult;
+		When(function(){
+			$rootScope.$apply(function(){
+				ngSecured.fetchingRoles().then(function(response){
+						result = response;
+					},
+					function(error){
+					errorResult = error;
+				})
+			})
+		});
+		describe("fetchRoles is not defined", function () {
+			Then(function(){ expect(errorResult).toBe("fetchRoles is not defined") });
+		});
+
+		describe("fetchRoles return a normal value", function () {
+			Given(function(){ ngSecuredProvider.secure({
+					fetchRoles: function(){ return "admin"; }
+				})
+			});
+			Then(function(){ expect(result).toEqual("admin") });
+		});
+
+		describe("fetchRoles can be injected", function () {
+			Given(function(){ ngSecuredProvider.secure({
+				fetchRoles: [function(){ "admin"; }]
+			})
+			});
+			Then(function(){ expect(result).toEqual("admin") });
+		});
+	});
+
 
 
 });

@@ -30,9 +30,9 @@ module.exports = function(config) {
 //		},
 //		reporters: ['progress','coverage'],
 
-		coverageReporter: {
-			type : 'text'
-		},
+//		coverageReporter: {
+//			type : 'text'
+//		},
 		// web server port
 		port: 8080,
 

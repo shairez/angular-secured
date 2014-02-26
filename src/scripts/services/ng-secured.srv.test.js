@@ -118,15 +118,35 @@ describe("ngSecured", function () {
         });
 
 	    describe("should fetch roles", function () {
-		    Given(function(){
-			    $stateProvider.state(stateName, {});
-			    ngSecuredProvider.secure({
-				    fetchRoles: function(){
-					    return "admin";
-				    }
-			    })
-		    });
-		    Then(function(){ expect(ngSecured.getRoles()).toEqual(['admin']) });
+            Given(function(){ $stateProvider.state(stateName, {}); });
+
+            describe("if fetchRoles is defined and getRoles returns nothing", function () {
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        fetchRoles: function(){
+                            return "admin";
+                        }
+                    })
+                });
+
+                describe("if getRoles returns nothing", function () {
+                    Given(function(){ ngSecured.setRoles(undefined); });
+                    Then(function(){
+                        expect(ngSecured.getRoles()).toEqual(['admin']);
+                        expect($state.current.name).toBe( stateName );
+                    });
+                });
+                describe("if getRoles returns something", function () {
+                    Given(function(){ ngSecured.setRoles(['user']); });
+                    Then(function(){ expect(ngSecured.getRoles()).toEqual(['user']) });
+                });
+            });
+
+            describe("if fetchRoles isn't defined", function () {
+                Then(function(){
+                    expect(ngSecured.getRoles()).toBeUndefined();
+                });
+            });
 	    });
     });
 
@@ -166,10 +186,11 @@ describe("ngSecured", function () {
                 expect(savedRoles).toEqual(roles)
             });
         });
-        describe("throw error if not array or string", function () {
+        describe("set undefined if not array or string", function () {
             Given(function(){ roles = 23; });
+            When(function(){ ngSecured.setRoles(roles); });
             Then(function(){
-                expect(function(){ ngSecured.setRoles(roles); }).toThrow(); });
+                expect(ngSecured.getRoles()).toBeUndefined() });
         });
     });
 
@@ -229,6 +250,26 @@ describe("ngSecured", function () {
                 Then(function(){ expect($qInjection).toBe($q) });
             });
 
+            describe("should return a promise", function () {
+                var result;
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        login: function(credentials){
+                            return "test";
+                        }
+                    })
+                });
+                When(function(){
+                    $rootScope.$apply(function(){
+                        ngSecured.login().then(function(response){
+                            result = response;
+                        })
+                    })
+
+                });
+                Then(function(){ expect(result).toBe('test') });
+            });
+
             describe("should set roles from login invoke result", function () {
 
                 describe("fetchRoles return a value", function () {
@@ -274,36 +315,39 @@ describe("ngSecured", function () {
     });
 
 	describe("Fetching Roles", function () {
-		var result, errorResult;
-		When(function(){
-			$rootScope.$apply(function(){
-				ngSecured.fetchingRoles().then(function(response){
-						result = response;
-					},
-					function(error){
-					errorResult = error;
-				})
-			})
-		});
+		var result;
+
 		describe("fetchRoles is not defined", function () {
-			Then(function(){ expect(errorResult).toBe("fetchRoles is not defined") });
+			Then(function(){ expect(function (){ ngSecured.fetchingRoles() }).toThrow("fetchRoles is not defined") });
 		});
 
-		describe("fetchRoles return a normal value", function () {
-			Given(function(){ ngSecuredProvider.secure({
-					fetchRoles: function(){ return "admin"; }
-				})
-			});
-			Then(function(){ expect(result).toEqual("admin") });
-		});
+        describe("fetchRoles is defined", function () {
+            When(function(){
+                $rootScope.$apply(function(){
+                    ngSecured.fetchingRoles().then(function(response){
+                        result = response;
+                    })
+                })
+            });
 
-		describe("fetchRoles can be injected", function () {
-			Given(function(){ ngSecuredProvider.secure({
-				fetchRoles: [function(){ "admin"; }]
-			})
-			});
-			Then(function(){ expect(result).toEqual("admin") });
-		});
+            describe("fetchRoles return a normal value", function () {
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        fetchRoles: function(){ return "admin"; }
+                    })
+                });
+                Then(function(){ expect(result).toEqual("admin") });
+            });
+
+            describe("fetchRoles can be injected", function () {
+                Given(function(){ ngSecuredProvider.secure({
+                    fetchRoles: [function(){ return "admin"; }]
+                })
+                });
+                Then(function(){ expect(result).toEqual("admin") });
+            });
+        });
+
 	});
 
 

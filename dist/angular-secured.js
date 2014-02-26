@@ -109,11 +109,7 @@ angular.module("ngSecured")
 
                     if (config.fetchRoles && config.setRolesFromCache && !getRoles()){
                         setRoles(config.getRolesFromCache());
-//                        event.preventDefault();
-//                        fetchingRoles().then(function(){
-//                            $state.go(toState, toParams);
-//                        });
-                    }
+                    } 
 
                     if (!!toState.secured) {
 

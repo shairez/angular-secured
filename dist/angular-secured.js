@@ -107,17 +107,14 @@ angular.module("ngSecured")
 
                 $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
 
-                    if (config.fetchRoles && !getRoles()){
-                        event.preventDefault();
-                        fetchingRoles().then(function(){
-                            $state.go(toState, toParams);
-                        });
-                    }else{
-                        guardStateTransition(event, toState, toParams);
+                    if (config.fetchRoles && config.setRolesFromCache && !getRoles()){
+                        setRoles(config.getRolesFromCache());
+//                        event.preventDefault();
+//                        fetchingRoles().then(function(){
+//                            $state.go(toState, toParams);
+//                        });
                     }
-                })
 
-                function guardStateTransition(event, toState, toParams){
                     if (!!toState.secured) {
 
                         if (!isAuthenticated()) {
@@ -132,9 +129,9 @@ angular.module("ngSecured")
                                 $state.go(config.unAuthorizedState);
                             }
                         }
-
                     }
-                }
+                })
+
 
                 function goToLastState() {
                     if (lastStateName) {

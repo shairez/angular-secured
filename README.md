@@ -17,7 +17,7 @@ API
 Sample Configuration
 --------------------
 
-```
+```js
 angular.module("sampleApp").config(function($ngSecuredProvider) {
 
   $ngSecuredProvider.secure({

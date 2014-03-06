@@ -2,7 +2,8 @@ TODO:
 
 1. inherit state "secured" property (decorator like 'data' on config)
 2. add "fetchingRoles" to config, remove assumption about getting roles from login
-    and return the actual login promise
+    and return the actual login promise,
+3. add timeout logic to angular-cache and not just FOREVER
 
 
 

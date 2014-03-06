@@ -105,6 +105,7 @@ angular.module("ngSecured")
                 loginState: defaultStateNames.NOT_AUTHENTICATED,
                 unAuthorizedState: defaultStateNames.NOT_AUTHORIZED,
                 postLoginState: defaultStateNames.NOT_AUTHENTICATED,
+                postLogoutState: defaultStateNames.NOT_AUTHENTICATED,
 	            fetchRoles: undefined,
                 login: undefined,
                 isAuthenticated: undefined,
@@ -249,7 +250,7 @@ angular.module("ngSecured")
                     return angular.copy(config.cache);
                 }
 
-                function loggingOut(){
+                function loggingOut(relogin){
                     var result;
                     if (cache){
                         cache.removeAll();
@@ -257,6 +258,12 @@ angular.module("ngSecured")
                     if (config.logout){
                         result = $injector.invoke(config.logout);
                     }
+                    if (relogin){
+                        $state.go(config.loginState);
+                    }else{
+                        $state.go(config.postLogoutState);
+                    }
+
                     return $q.when(result);
                 }
 

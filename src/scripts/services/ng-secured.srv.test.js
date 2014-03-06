@@ -517,11 +517,17 @@ describe("ngSecured", function () {
 
     describe("loggingOut", function () {
         var logoutSpy,
-            logoutPromise;
+            logoutPromise,
+            reLogin;
         Given(function(){
+            reLogin = false;
             logoutSpy = jasmine.createSpy("logoutSpy");
         });
-        When(function(){ logoutPromise = ngSecured.loggingOut(); });
+        When(function(){
+            $rootScope.$apply(function(){
+                logoutPromise = ngSecured.loggingOut(reLogin);
+            })
+        });
 
         describe("if logout is defined", function () {
             Given(function(){
@@ -562,6 +568,27 @@ describe("ngSecured", function () {
                 Then(function(){
                     var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
                     expect(mainCache.removeAll).toHaveBeenCalled();
+                });
+            });
+
+            describe("should go to postLogoutState", function () {
+                var logoutState = "testLogout",
+                    loginState = "testLogin";
+                Given(function(){
+                    $stateProvider.state(logoutState, {});
+                    $stateProvider.state(loginState, {});
+                    ngSecuredProvider.secure({
+                        postLogoutState: logoutState,
+                        loginState: loginState
+                    })
+                });
+                Then(function(){ expect($state.current.name).toBe( logoutState ); });
+
+                describe("if relogin is true", function () {
+                    Given(function(){ reLogin = true; });
+                    Then(function(){
+                        expect($state.current.name).toBe( loginState );
+                    });
                 });
             });
         });

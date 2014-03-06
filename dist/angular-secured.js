@@ -18,7 +18,7 @@ angular.module("ngSecured")
 
     })
 
-(function(angular){
+;(function(angular){
 
     var baseStateName = "private__ngSecured";
 

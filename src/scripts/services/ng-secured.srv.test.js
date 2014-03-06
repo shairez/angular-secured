@@ -6,12 +6,15 @@ describe("ngSecured", function () {
         $rootScope,
         $stateProvider,
         $q,
+        defaultStateNames,
+        cacheOptions,
+        $angularCacheFactory,
         stateName = "testState",
         stateParams = {sectionId: '1'},
         loginStateName = "loginState",
         secureState = {secured: {}, url:"/:sectionId" };
 
-	beforeEach(module("ngSecured"));
+	beforeEach(module("ngSecured", "mocks.$angularCacheFactory"));
 
     beforeEach(module(function(_ngSecuredProvider_, _$stateProvider_){
         $stateProvider = _$stateProvider_;
@@ -23,14 +26,23 @@ describe("ngSecured", function () {
                        "$state",
                        "$rootScope",
                        "$q",
+                       "ngSecured.defaultStateNames",
+                       "ngSecured.cacheOptions",
+                       "$angularCacheFactory",
 		function (_ngSecured,
                     _$state,
                     _$rootScope,
-                    _$q) {
+                    _$q,
+                    _defaultStateNames,
+                    _cacheOptions,
+                    _$angularCacheFactory) {
             ngSecured = _ngSecured;
             $state = _$state;
             $rootScope = _$rootScope;
             $q = _$q;
+            defaultStateNames = _defaultStateNames;
+            cacheOptions = _cacheOptions;
+            $angularCacheFactory = _$angularCacheFactory;
 	}]));
 
     describe("transitioning to a state", function () {
@@ -50,7 +62,7 @@ describe("ngSecured", function () {
 
             describe("no login state configured", function () {
                 Then(function(){
-                    expect($state.current.name).toBe( ngSecured.defaultStateNames.NOT_AUTHENTICATED );
+                    expect($state.current.name).toBe( defaultStateNames.NOT_AUTHENTICATED );
                 });
             });
             describe("login state is configured", function () {
@@ -80,7 +92,7 @@ describe("ngSecured", function () {
                                 isAuthenticated: function(){ return true; },
                                 login: function(){ return "admin"; }
                             })
-                            ngSecured.login();
+                            ngSecured.loggingIn();
                             $rootScope.$apply();
 
                         });
@@ -105,7 +117,7 @@ describe("ngSecured", function () {
 
                         describe("if user not authorized", function () {
                             Then(function(){
-                                expect($state.current.name).toBe( ngSecured.defaultStateNames.NOT_AUTHORIZED ); });
+                                expect($state.current.name).toBe( defaultStateNames.NOT_AUTHORIZED ); });
                         });
 
                         describe("user is authorized", function () {
@@ -129,7 +141,7 @@ describe("ngSecured", function () {
                     })
                 });
 
-                describe("if getRoles returns nothing", function () {
+                xdescribe("if getRoles returns nothing", function () {
                     Given(function(){ ngSecured.setRoles(undefined); });
                     Then(function(){
                         expect(ngSecured.getRoles()).toEqual(['admin']);
@@ -167,12 +179,13 @@ describe("ngSecured", function () {
         Then(function(){ expect($qInjection).toBe($q) });
     });
 
-    describe("set roles", function () {
+    describe("setRoles", function () {
         var roles;
+
+        When(function(){ ngSecured.setRoles(roles); });
 
         describe("one role", function () {
             Given(function(){ roles = "admin" });
-            When(function(){ ngSecured.setRoles(roles); });
             Then(function(){
                 var savedRoles = ngSecured.getRoles();
                 expect(savedRoles).toEqual(['admin'])
@@ -180,31 +193,52 @@ describe("ngSecured", function () {
         });
         describe("multiple role", function () {
             Given(function(){ roles = ["admin", 'user'] });
-            When(function(){ ngSecured.setRoles(roles); });
             Then(function(){
                 var savedRoles = ngSecured.getRoles();
                 expect(savedRoles).toEqual(roles)
             });
+            describe("should cache the roles", function () {
+                Then(function(){
+                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    expect(mainCache.put).toHaveBeenCalledWith(cacheOptions.cacheKeys.ROLES, roles);
+                });
+            });
         });
         describe("set undefined if not array or string", function () {
             Given(function(){ roles = 23; });
-            When(function(){ ngSecured.setRoles(roles); });
             Then(function(){
                 expect(ngSecured.getRoles()).toBeUndefined() });
         });
     });
 
-    describe("include role", function () {
-        Given(function(){ ngSecured.setRoles(['admin']); });
-        Then(function(){ expect(ngSecured.includesRole('admin')).toBe(true); });
+    describe("getRoles should try to get from cache", function () {
+        var roles;
+        Given(function(){ roles = ["admin"]; });
+        When(function(){ roles = ngSecured.getRoles(); });
+        Then(function(){
+            var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+            expect(mainCache.get).toHaveBeenCalledWith(cacheOptions.cacheKeys.ROLES);
+        });
+        describe("if cahce is false should not try to fetch", function () {
+            Given(function(){ ngSecuredProvider.secure({cache: false}) });
+            Then(function(){
+                var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                expect(mainCache.get).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.ROLES);
+            });
+        });
     });
 
-    describe("doesn't include a role", function () {
-        Then(function(){ expect(ngSecured.includesRole('admin')).toBe(false); });
+    describe("includesRole", function () {
+        describe("do include role", function () {
+            Given(function(){ ngSecured.setRoles(['admin']); });
+            Then(function(){ expect(ngSecured.includesRole('admin')).toBe(true); });
+        });
+        describe("doesn't include a role", function () {
+            Then(function(){ expect(ngSecured.includesRole('admin')).toBe(false); });
+        });
     });
 
-
-    describe("login", function () {
+    describe("loggingIn", function () {
 
         describe("login is not configured", function () {
             Then(function(){ expect(function(){ ngSecured.login();}).toThrow(); });
@@ -221,7 +255,7 @@ describe("ngSecured", function () {
 
             When(function(){
                 $rootScope.$apply(function(){
-                    ngSecured.login(credentials);
+                    ngSecured.loggingIn(credentials);
                 });
             });
 
@@ -261,7 +295,7 @@ describe("ngSecured", function () {
                 });
                 When(function(){
                     $rootScope.$apply(function(){
-                        ngSecured.login().then(function(response){
+                        ngSecured.loggingIn().then(function(response){
                             result = response;
                         })
                     })
@@ -297,7 +331,7 @@ describe("ngSecured", function () {
             });
 
             describe("post login state is not defined", function () {
-                Then(function(){ expect($state.current.name).toBe(ngSecured.defaultStateNames.NOT_AUTHENTICATED); });
+                Then(function(){ expect($state.current.name).toBe(defaultStateNames.NOT_AUTHENTICATED); });
             });
 
             describe("post login state is defined", function () {
@@ -314,7 +348,101 @@ describe("ngSecured", function () {
         });
     });
 
-	describe("Fetching Roles", function () {
+    describe("cache", function () {
+        var cache;
+
+        Given(function(){ cache = ngSecured._getCache(); });
+
+        describe("if no cache config was provided", function () {
+            Then(function(){
+                expect(cache.timeout).toBe(cacheOptions.timeout.FOREVER);
+                expect(cache.location).toBe(cacheOptions.location.LOCAL_STORAGE);
+            });
+        });
+
+        describe("cache forever", function () {
+            Given(function(){
+                ngSecuredProvider.secure({
+                    cache: { timeout: cacheOptions.timeout.FOREVER }
+                });
+            });
+            Then(function(){
+                expect(cache.timeout).toBe(cacheOptions.timeout.FOREVER);
+            });
+
+        });
+
+        describe("cache location", function () {
+            var location;
+            Given(function(){ $angularCacheFactory.reset(); });
+            describe("localStorage", function () {
+                Given(function(){
+                    location = cacheOptions.location.LOCAL_STORAGE;
+                    ngSecuredProvider.secure({
+                        cache: { location: location }
+                    });
+                    ngSecured._initVars();
+                });
+                Then(function(){
+                    expect($angularCacheFactory).toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE, {storageMode:location});
+                });
+            });
+
+            describe("sessionStorage", function () {
+                Given(function(){
+                    location = cacheOptions.location.SESSION_STORAGE;
+                    ngSecuredProvider.secure({
+                        cache: { location: location }
+                    });
+                    ngSecured._initVars();
+                });
+                Then(function(){
+                    expect($angularCacheFactory).toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE, {storageMode:location});
+                });
+            });
+
+        });
+
+        describe("when logging in", function () {
+            Given(function(){
+                ngSecuredProvider.secure({
+                    login: function(){
+                        return "success";
+                    }
+                });
+            });
+            When(function(){
+                $rootScope.$apply(function(){
+                    ngSecured.loggingIn();
+                });
+            });
+            describe("should cache the loggedIn state ", function () {
+                Then(function(){
+                    expect($angularCacheFactory).toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE, {storageMode: cacheOptions.location.LOCAL_STORAGE});
+                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    expect(mainCache.put).toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN, true);
+
+                });
+            });
+
+            describe("when no cache", function () {
+                Given(function(){
+                    $angularCacheFactory.reset();
+                    ngSecuredProvider.secure({
+                        cache: false
+                    });
+                });
+                When(function(){ ngSecured._initVars(); });
+                Then(function(){
+                    expect($angularCacheFactory).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE);
+                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    expect(mainCache.put).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN, true);
+                });
+            });
+        });
+    });
+
+	describe("fetchingRoles", function () {
 		var result;
 
 		describe("fetchRoles is not defined", function () {
@@ -350,6 +478,45 @@ describe("ngSecured", function () {
 
 	});
 
+    describe("loggingOut", function () {
+        var logoutSpy,
+            logoutPromise;
+        Given(function(){
+            logoutSpy = jasmine.createSpy("logoutSpy");
+        });
+        When(function(){ logoutPromise = ngSecured.loggingOut(); });
 
+        describe("if logout is defined", function () {
+            Given(function(){
+                ngSecuredProvider.secure({
+                    logout: logoutSpy
+                })
+            });
+            Then(function(){
+                expect(logoutSpy).toHaveBeenCalled();
+            });
+
+            describe("should return promise", function () {
+                Given(function(){ logoutSpy.andReturn("test") });
+                Then(function(){
+                    var logoutResult;
+                    $rootScope.$apply(function(){
+                        logoutPromise.then(function(result){
+                            logoutResult = result;
+                        });
+                    })
+                    expect(logoutResult).toBe("test")
+                });
+            });
+
+            describe("should delete cache", function () {
+                Then(function(){
+                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    expect(mainCache.removeAll).toHaveBeenCalled();
+                });
+            });
+        });
+
+    });
 
 });

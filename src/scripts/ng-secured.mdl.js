@@ -1,1 +1,2 @@
-angular.module('ngSecured', ["ui.router"]).run(["ngSecured", function(ngSecured){}] );
+angular.module('ngSecured', ["ui.router", "jmdobry.angular-cache"])
+        .run(["ngSecured", function(ngSecured){}] );

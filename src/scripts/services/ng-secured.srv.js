@@ -1,50 +1,56 @@
 angular.module("ngSecured")
-    .provider("ngSecured", ["$stateProvider", function ($stateProvider) {
+    .provider("ngSecured", ["$stateProvider",
+                            "ngSecured.defaultStateNames",
+                            "ngSecured.cacheOptions",
+                            function ($stateProvider,
+                                      defaultStateNames,
+                                      cacheOptions) {
 
-        var baseStateName = "private__ngSecured",
-            defaultStateNames = {
-                "BASE_STATE": baseStateName,
-                "NOT_AUTHENTICATED": baseStateName + ".notAuthenticated",
-                "NOT_AUTHORIZED": baseStateName + ".notAuthorized"
-            },
-            config = {
+        var config = {
                 loginState: defaultStateNames.NOT_AUTHENTICATED,
                 unAuthorizedState: defaultStateNames.NOT_AUTHORIZED,
+                postLoginState: defaultStateNames.NOT_AUTHENTICATED,
+	            fetchRoles: undefined,
+                login: undefined,
                 isAuthenticated: function () {
                     return false
                 },
-                postLoginState: defaultStateNames.NOT_AUTHENTICATED,
-	            fetchRoles: undefined
+                cache:{
+                    timeout: cacheOptions.timeout.FOREVER,
+                    location: cacheOptions.location.LOCAL_STORAGE
+                }
             };
 
         $stateProvider.state(defaultStateNames.BASE_STATE, {});
         $stateProvider.state(defaultStateNames.NOT_AUTHENTICATED, {views: {"@": {template: "please login to see this page."}}});
         $stateProvider.state(defaultStateNames.NOT_AUTHORIZED, {views: {"@": {template: "You are not authorized to see this page."}}});
 
-
         this.secure = function (userConfig) {
             angular.extend(config, userConfig);
-
         }
 
         this.$get = ["$rootScope", "$state", "$q", "$injector",
-            function ($rootScope, $state, $q, $injector) {
+                     "$angularCacheFactory",
+            function ($rootScope, $state, $q, $injector,
+                      $angularCacheFactory) {
 
                 var lastStateName,
                     lastStateParams,
-                    roles;
+                    roles,
+                    cache;
 
                 function initVars() {
                     lastStateName = config.postLoginState;
+                    if (config.cache){
+                        cache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE,
+                                                    {storageMode: config.cache.location});
+                    }
+
                 }
 
                 initVars();
 
                 $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
-
-                    if (config.fetchRoles && config.setRolesFromCache && !getRoles()){
-                        setRoles(config.getRolesFromCache());
-                    }
 
                     if (!!toState.secured) {
 
@@ -62,7 +68,6 @@ angular.module("ngSecured")
                         }
                     }
                 })
-
 
                 function goToLastState() {
                     if (lastStateName) {
@@ -92,6 +97,9 @@ angular.module("ngSecured")
                 }
 
                 function getRoles(){
+                    if (!roles && config.cache){
+                        roles = cache.get(cacheOptions.cacheKeys.ROLES);
+                    }
                     return roles;
                 }
 
@@ -103,46 +111,67 @@ angular.module("ngSecured")
 		            } else {
 			            roles = rolesValue;
 		            }
+                    if (roles && config.cache){
+                        cache.put(cacheOptions.cacheKeys.ROLES, roles)
+                    }
 	            }
 
-                return {
-                    defaultStateNames: defaultStateNames,
-                    _initVars: initVars,
+                function includesRole(role) {
+                    if (roles && roles.indexOf(role) !== -1) {
+                        return true;
+                    }
+                    return false;
+                }
 
-                    login: function (credentials) {
+                function loggingIn(credentials) {
 
-                        if (!config.login) {
-                            throw new Error("login function must be configured");
-                        } else {
-                            var loginPromise = $q.when($injector.invoke(config.login, config, {credentials: credentials}));
+                    if (!config.login) {
+                        throw new Error("login function must be configured");
+                    } else {
+                        var loginPromise = $q.when($injector.invoke(config.login, config, {credentials: credentials}));
+                        loginPromise.then(function(result){
 
-                            loginPromise.then(function(result){
-                                if (config.fetchRoles){
-                                    fetchingRoles().then(function(){
-                                        goToLastState();
-                                    });
-                                }else{
+                            if (config.cache){
+                                cache.put(cacheOptions.cacheKeys.IS_LOGGED_IN, true);
+                            }
+
+                            if (config.fetchRoles){
+                                fetchingRoles().then(function(){
                                     goToLastState();
-                                }
-                            })
-	                        return loginPromise;
-                        }
-                    },
+                                });
+                            }else{
+                                goToLastState();
+                            }
+                        })
+                        return loginPromise;
+                    }
+                }
 
+                function getCache(){
+                    return angular.copy(config.cache);
+                }
+
+                function loggingOut(){
+                    var result;
+                    if (config.logout){
+                        result = config.logout();
+                    }
+                    if (cache){
+                        cache.removeAll();
+                    }
+                    return $q.when(result);
+                }
+
+                return {
+                    _initVars: initVars,
+                    _getCache: getCache,
+                    loggingIn: loggingIn,
+                    fetchingRoles: fetchingRoles,
                     isAuthenticated: isAuthenticated,
-
                     setRoles: setRoles,
-
                     getRoles: getRoles,
-
-                    includesRole: function (role) {
-                        if (roles && roles.indexOf(role) !== -1) {
-                            return true;
-                        }
-                        return false;
-                    },
-	                fetchingRoles: fetchingRoles
-
+                    includesRole: includesRole,
+                    loggingOut: loggingOut
                 }
             }];
     }])

@@ -14,6 +14,11 @@ describe("ngSecured", function () {
         loginStateName = "loginState",
         secureState = {secured: {}, url:"/:sectionId" };
 
+    // helper methods
+    function getMainCache(){
+        return $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+    }
+
 	beforeEach(module("ngSecured", "mocks.$angularCacheFactory"));
 
     beforeEach(module(function(_ngSecuredProvider_, _$stateProvider_){
@@ -162,21 +167,53 @@ describe("ngSecured", function () {
 	    });
     });
 
-    describe("isAuthenticated should be able to inject dependencies", function () {
-        var $qInjection;
+    describe("isAuthenticated", function () {
+        var isAuthResult;
+        When(function(){ isAuthResult = ngSecured.isAuthenticated(); });
 
-        Given(function(){
-            ngSecuredProvider.secure({
-                isAuthenticated: [
-                    "$q",
-                    function($q){
-                        $qInjection = $q;
-                    }
-                ]
-            })
+        describe("should be able to inject dependencies", function () {
+            var $qInjection;
+            Given(function(){
+                ngSecuredProvider.secure({
+                    isAuthenticated: [
+                        "$q",
+                        function($q){
+                            $qInjection = $q;
+                        }
+                    ]
+                })
+            });
+            Then(function(){ expect($qInjection).toBe($q) });
         });
-        When(function(){ ngSecured.isAuthenticated(); });
-        Then(function(){ expect($qInjection).toBe($q) });
+
+        describe("if defined", function () {
+            var isAuthSpy;
+            Given(function(){
+                isAuthSpy = jasmine.createSpy();
+                ngSecuredProvider.secure({
+                    isAuthenticated: isAuthSpy
+                })
+            });
+            Then(function(){
+                var mainCache = getMainCache();
+                expect(mainCache.get).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN);
+                expect(isAuthSpy).toHaveBeenCalled();
+            });
+        });
+        describe("if not defined", function () {
+            Then(function(){
+                var mainCache = getMainCache();
+                expect(mainCache.get).toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN);
+            });
+            describe("and cache is false", function () {
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        cache: false
+                    })
+                });
+                Then(function(){ expect(isAuthResult).toBe(false) });
+            });
+        });
     });
 
     describe("setRoles", function () {
@@ -199,7 +236,7 @@ describe("ngSecured", function () {
             });
             describe("should cache the roles", function () {
                 Then(function(){
-                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    var mainCache = getMainCache();
                     expect(mainCache.put).toHaveBeenCalledWith(cacheOptions.cacheKeys.ROLES, roles);
                 });
             });
@@ -222,7 +259,7 @@ describe("ngSecured", function () {
         describe("if cahce is false should not try to fetch", function () {
             Given(function(){ ngSecuredProvider.secure({cache: false}) });
             Then(function(){
-                var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                var mainCache = getMainCache();
                 expect(mainCache.get).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.ROLES);
             });
         });
@@ -419,7 +456,7 @@ describe("ngSecured", function () {
             describe("should cache the loggedIn state ", function () {
                 Then(function(){
                     expect($angularCacheFactory).toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE, {storageMode: cacheOptions.location.LOCAL_STORAGE});
-                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    var mainCache = getMainCache();
                     expect(mainCache.put).toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN, true);
 
                 });
@@ -435,7 +472,7 @@ describe("ngSecured", function () {
                 When(function(){ ngSecured._initVars(); });
                 Then(function(){
                     expect($angularCacheFactory).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.MAIN_CACHE);
-                    var mainCache = $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+                    var mainCache = getMainCache();
                     expect(mainCache.put).not.toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN, true);
                 });
             });

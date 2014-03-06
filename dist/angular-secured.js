@@ -107,9 +107,7 @@ angular.module("ngSecured")
                 postLoginState: defaultStateNames.NOT_AUTHENTICATED,
 	            fetchRoles: undefined,
                 login: undefined,
-                isAuthenticated: function () {
-                    return false
-                },
+                isAuthenticated: undefined,
                 cache:{
                     timeout: cacheOptions.timeout.FOREVER,
                     location: cacheOptions.location.LOCAL_STORAGE
@@ -188,7 +186,12 @@ angular.module("ngSecured")
 	            }
 
                 function isAuthenticated(){
-                    return $injector.invoke(config.isAuthenticated);
+                    if (config.isAuthenticated){
+                        return $injector.invoke(config.isAuthenticated);
+                    }else if (config.cache && cache){
+                        return cache.get(cacheOptions.cacheKeys.IS_LOGGED_IN);
+                    }
+                    return false;
                 }
 
                 function getRoles(){

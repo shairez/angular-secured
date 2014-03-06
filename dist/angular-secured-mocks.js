@@ -17,7 +17,12 @@ angular.module("mocks.ngSecured", [])
 
         var mock = jasmine.createSpyObj("ngSecured",
             ["includesRole",
-             "getRoles"]);
+             "loggingIn",
+            "fetchingRoles",
+            "isAuthenticated",
+            "setRoles",
+            "getRoles",
+            "loggingOut"]);
         mock.$deferred = {
 
         }

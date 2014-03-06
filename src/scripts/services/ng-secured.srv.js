@@ -156,11 +156,11 @@ angular.module("ngSecured")
 
                 function loggingOut(){
                     var result;
-                    if (config.logout){
-                        result = config.logout();
-                    }
                     if (cache){
                         cache.removeAll();
+                    }
+                    if (config.logout){
+                        result = $injector.invoke(config.logout);
                     }
                     return $q.when(result);
                 }

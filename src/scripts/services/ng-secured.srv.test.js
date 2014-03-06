@@ -533,6 +533,18 @@ describe("ngSecured", function () {
                 expect(logoutSpy).toHaveBeenCalled();
             });
 
+            describe("should inject dependencies", function () {
+                var $qInjection;
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        logout: ["$q", function($q){
+                            $qInjection = $q;
+                        }]
+                    })
+                });
+                Then(function(){ expect($qInjection).toBe($q) });
+            });
+
             describe("should return promise", function () {
                 Given(function(){ logoutSpy.andReturn("test") });
                 Then(function(){

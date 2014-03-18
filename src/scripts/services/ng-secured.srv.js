@@ -95,7 +95,8 @@ angular.module("ngSecured")
                     if (config.isAuthenticated){
                         return $injector.invoke(config.isAuthenticated);
                     }else if (config.cache && cache){
-                        return cache.get(cacheOptions.cacheKeys.IS_LOGGED_IN);
+                        var isLoggedIn = cache.get(cacheOptions.cacheKeys.IS_LOGGED_IN);
+                        return !!isLoggedIn;
                     }
                     return false;
                 }

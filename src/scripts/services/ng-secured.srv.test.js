@@ -167,7 +167,7 @@ describe("ngSecured", function () {
 	    });
     });
 
-    describe("isAuthenticated", function () {
+    describe("config isAuthenticated", function () {
         var isAuthResult;
         When(function(){ isAuthResult = ngSecured.isAuthenticated(); });
 
@@ -205,6 +205,13 @@ describe("ngSecured", function () {
                 var mainCache = getMainCache();
                 expect(mainCache.get).toHaveBeenCalledWith(cacheOptions.cacheKeys.IS_LOGGED_IN);
             });
+
+            describe("and localstorage IS_LOGGED_IN is empty", function () {
+                Then(function(){
+                    expect(isAuthResult).toBe(false);
+                });
+            });
+
             describe("and cache is false", function () {
                 Given(function(){
                     ngSecuredProvider.secure({

@@ -6,6 +6,8 @@ describe("ngSecured", function () {
         $rootScope,
         $stateProvider,
         $q,
+        $http,
+        $httpBackend,
         defaultStateNames,
         cacheOptions,
         $angularCacheFactory,
@@ -17,6 +19,18 @@ describe("ngSecured", function () {
     // helper methods
     function getMainCache(){
         return $angularCacheFactory(cacheOptions.cacheKeys.MAIN_CACHE);
+    }
+
+    function configureLoginState(){
+        ngSecuredProvider.secure({
+            loginState: loginStateName
+        });
+        $stateProvider.state(loginStateName, {});
+    }
+
+    function configureNormalState(state){
+        if (!state) state = {};
+        $stateProvider.state(stateName, state);
     }
 
 	beforeEach(module("ngSecured", "mocks.$angularCacheFactory"));
@@ -34,13 +48,17 @@ describe("ngSecured", function () {
                        "ngSecured.defaultStateNames",
                        "ngSecured.cacheOptions",
                        "$angularCacheFactory",
+                       "$httpBackend",
+                       "$http",
 		function (_ngSecured,
                     _$state,
                     _$rootScope,
                     _$q,
                     _defaultStateNames,
                     _cacheOptions,
-                    _$angularCacheFactory) {
+                    _$angularCacheFactory,
+                    _$httpBackend,
+                    _$http) {
             ngSecured = _ngSecured;
             $state = _$state;
             $rootScope = _$rootScope;
@@ -48,6 +66,8 @@ describe("ngSecured", function () {
             defaultStateNames = _defaultStateNames;
             cacheOptions = _cacheOptions;
             $angularCacheFactory = _$angularCacheFactory;
+            $httpBackend = _$httpBackend;
+            $http = _$http;
 	}]));
 
     describe("transitioning to a state", function () {
@@ -58,12 +78,12 @@ describe("ngSecured", function () {
         });
 
         describe("insecure state", function () {
-            Given(function(){ $stateProvider.state(stateName, {}); });
+            Given(function(){ configureNormalState(); });
             Then(function(){ expect($state.current.name).toBe( stateName ); });
         });
 
         describe("secure state", function () {
-            Given(function(){ $stateProvider.state(stateName, secureState); });
+            Given(function(){ configureNormalState(secureState); });
 
             describe("no login state configured", function () {
                 Then(function(){
@@ -71,12 +91,7 @@ describe("ngSecured", function () {
                 });
             });
             describe("login state is configured", function () {
-                Given(function(){
-                    ngSecuredProvider.secure({
-                        loginState: loginStateName
-                    });
-                    $stateProvider.state(loginStateName, {});
-                });
+                Given(function(){ configureLoginState(); });
                 Then(function(){ expect($state.current.name).toBe( loginStateName ); });
 
 
@@ -395,7 +410,7 @@ describe("ngSecured", function () {
     describe("cache", function () {
         var cache;
 
-        Given(function(){ cache = ngSecured._getCache(); });
+        Given(function(){ cache = ngSecured._getCacheConfig(); });
 
         describe("if no cache config was provided", function () {
             Then(function(){
@@ -599,6 +614,71 @@ describe("ngSecured", function () {
                 });
             });
         });
+
+    });
+
+    describe("should relogin On error Http Status", function () {
+        Given(function(){
+            configureLoginState();
+            configureNormalState({url:"/:sectionId"});
+            $httpBackend.whenGET("/noAuth").respond(403);
+            $rootScope.$apply(function(){
+                $state.go(stateName, stateParams);
+            })
+        });
+
+        When(function(){
+            $http.get("/noAuth");
+            $httpBackend.flush();
+        });
+
+        describe("and status is a number", function () {
+            Given(function(){
+                ngSecuredProvider.secure({
+                    reloginOnHttpStatus: 403
+                })
+            });
+
+            Then(function(){ expect($state.current.name).toBe(loginStateName) });
+
+            describe("should save last state", function () {
+                Given(function(){
+                    ngSecuredProvider.secure({
+                        isAuthenticated: function(){ return true; },
+                        login: function(){ return "admin"; }
+                    })
+                });
+                When(function(){
+                    ngSecured.loggingIn();
+                    $rootScope.$apply();
+                });
+                Then(function(){
+                    expect($state.current.name).toBe( stateName );
+                    expect($state.params).toEqual( stateParams );
+                });
+            });
+        });
+
+        describe("and status is array", function () {
+            Given(function(){
+                ngSecuredProvider.secure({
+                    reloginOnHttpStatus: [403, 404]
+                })
+                $httpBackend.whenGET("/noAuth2").respond(404);
+            });
+            Then(function(){
+                expect($state.current.name).toBe(loginStateName);
+                $rootScope.$apply(function(){ $state.go(stateName) });
+                $http.get("/noAuth2");
+                $httpBackend.flush();
+                expect($state.current.name).toBe(loginStateName);
+            });
+        });
+
+
+
+
+
 
     });
 

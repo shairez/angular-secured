@@ -2,9 +2,14 @@ angular.module("ngSecured")
     .provider("ngSecured", ["$stateProvider",
                             "ngSecured.defaultStateNames",
                             "ngSecured.cacheOptions",
+                            "$httpProvider",
                             function ($stateProvider,
                                       defaultStateNames,
-                                      cacheOptions) {
+                                      cacheOptions,
+                                      $httpProvider) {
+
+        var lastStateName,
+            lastStateParams;
 
         var config = {
                 loginState: defaultStateNames.NOT_AUTHENTICATED,
@@ -17,7 +22,8 @@ angular.module("ngSecured")
                 cache:{
                     timeout: cacheOptions.timeout.FOREVER,
                     location: cacheOptions.location.LOCAL_STORAGE
-                }
+                },
+                reloginOnHttpStatus: undefined
             };
 
         $stateProvider.state(defaultStateNames.BASE_STATE, {});
@@ -26,16 +32,49 @@ angular.module("ngSecured")
 
         this.secure = function (userConfig) {
             angular.extend(config, userConfig);
+        };
+
+
+        function saveStateInCache(stateName, stateParams){
+            lastStateName = stateName;
+            lastStateParams = stateParams;
         }
+
+        (function setupHttpInterceptor(){
+            $httpProvider.interceptors.push(["$injector", "$q", function($injector, $q){
+                return {
+                    "responseError": function(error){
+                        var reloginStatus = config.reloginOnHttpStatus;
+                        if (reloginStatus){
+                            var $state = $injector.get(["$state"]);
+
+                            function goToLogin(status){
+                                saveStateInCache($state.current.name, $state.params);
+                                $state.go(config.loginState);
+                            }
+
+                            if (angular.isNumber(reloginStatus) &&
+                                error.status === reloginStatus){
+                                goToLogin();
+
+                            } else if (angular.isArray(reloginStatus) &&
+                                reloginStatus.indexOf(error.status) !== -1){
+                                goToLogin();
+                            }
+                        }
+                        return $q.reject(error);
+                    }
+                }
+            }]);
+
+        })();
 
         this.$get = ["$rootScope", "$state", "$q", "$injector",
                      "$angularCacheFactory",
             function ($rootScope, $state, $q, $injector,
                       $angularCacheFactory) {
 
-                var lastStateName,
-                    lastStateParams,
-                    roles,
+                var roles,
                     cache;
 
                 function initVars() {
@@ -49,14 +88,14 @@ angular.module("ngSecured")
 
                 initVars();
 
-                $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
 
+
+                $rootScope.$on("$stateChangeStart", function (event, toState, toParams) {
                     if (!!toState.secured) {
 
                         if (!isAuthenticated()) {
                             event.preventDefault();
-                            lastStateName = toState.name;
-                            lastStateParams = toParams;
+                            saveStateInCache(toState.name, toParams);
                             $state.go(config.loginState);
                         } else if (toState.secured.hasOwnProperty("role")) {
 
@@ -152,7 +191,7 @@ angular.module("ngSecured")
                     }
                 }
 
-                function getCache(){
+                function getCacheConfig(){
                     return angular.copy(config.cache);
                 }
 
@@ -175,7 +214,7 @@ angular.module("ngSecured")
 
                 return {
                     _initVars: initVars,
-                    _getCache: getCache,
+                    _getCacheConfig: getCacheConfig,
                     loggingIn: loggingIn,
                     fetchingRoles: fetchingRoles,
                     isAuthenticated: isAuthenticated,

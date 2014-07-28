@@ -14,6 +14,7 @@
         "Shai Reznik <shai.reznik@gmail.com>"
     ],
     "description": "Angular Auth Management",
+    "main": "./dist/angular-secured.min.js",
     "keywords": [
         "angular",
         "chrome",

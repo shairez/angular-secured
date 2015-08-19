@@ -1,4 +1,4 @@
-describe("asRole directive", function () {
+xdescribe("asRole directive", function () {
 
 	var $rootScope,
         $compile,

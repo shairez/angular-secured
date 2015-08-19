@@ -3,15 +3,15 @@
     "version": "0.0.1",
     "dependencies": {
         "angular": "1.2.9",
-        "angular-cache": "2.3.3",
-        "angular-ui-router": "0.2.10"
+        "angular-cache": "4.3.2",
+        "angular-ui-router": "0.2.15"
     },
     "devDependencies": {
-        "angular-mocks": "~1.2.0",
+        "angular-mocks": "1.2.9",
         "jasmine-given": "~2.5.0"
     },
     "authors": [
-        "Shai Reznik <shai.reznik@gmail.com>"
+        "Shai Reznik <shai@hirez.io>"
     ],
     "description": "Angular Auth Management",
     "main": "./dist/angular-secured.js",
@@ -31,6 +31,6 @@
         "coverage"
     ],
     "resolutions": {
-        "angular": "1.2.9"
+        "angular": "1.4.0"
     }
 }

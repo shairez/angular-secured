@@ -47,9 +47,17 @@ module.exports = function (grunt) {
     },
 
     concat: {
-      onlyLogin: {
+      options:{
+        separator: ';'
+      },
+      js: {
         files: {
-          "<%= yeoman.dist %>/<%= yeoman.distFileName %>.js": loginSources
+          "<%= yeoman.dist %>/<%= yeoman.distFileName %>.js": onlySources,
+        }
+      },
+      mocks:{
+        files: {
+          "<%= yeoman.dist %>/<%= yeoman.distFileName %>-mocks.js": onlyMocks
         }
       },
       everything: {

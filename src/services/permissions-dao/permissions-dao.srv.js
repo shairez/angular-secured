@@ -22,12 +22,12 @@
 
     factory.$inject = [
       '$http',
-      'CacheFactory',
+      'localStorageService',
       'ngSecured.cacheKeys',
       '$q'
     ];
     function factory($http,
-                     CacheFactory,
+                     localStorageService,
                      cacheKeys,
                      $q) {
 
@@ -50,27 +50,17 @@
 
         function success(response) {
           var permissions = response.data;
-          var permissionsCache = getPermissionsCache();
-          permissionsCache.put(cacheKeys.PERMISSIONS, permissions);
+          localStorageService.set(cacheKeys.PERMISSIONS, permissions);
           cachedPermissions = permissions;
           return permissions;
         }
-      }
-
-      function getPermissionsCache() {
-        var permissionsCache = CacheFactory.get(cacheKeys.PERMISSIONS_CACHE);
-        if (!permissionsCache) {
-          permissionsCache = CacheFactory(cacheKeys.PERMISSIONS_CACHE);
-        }
-        return permissionsCache;
       }
 
       function getCachedPermissions() {
         if (cachedPermissions){
           return cachedPermissions;
         }
-        var permissionsCache = getPermissionsCache();
-        cachedPermissions = permissionsCache.get(cacheKeys.PERMISSIONS);
+        cachedPermissions = localStorageService.get(cacheKeys.PERMISSIONS);
         return cachedPermissions;
       }
 

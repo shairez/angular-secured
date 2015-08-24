@@ -25,18 +25,25 @@
   }
 
 
-  factory.$inject = ['$http',
-                     'ngSecured.cacheKeys',
-                     'CacheFactory',
-                     '$parse',
-                     '$q'];
+  factory.$inject =
+    ['$http',
+     'ngSecured.cacheKeys',
+     'localStorageService',
+     '$parse',
+     '$q',
+     'ngSecured.errorMessages',
+     '$log'
+    ];
   function factory($http,
                    cacheKeys,
-                   CacheFactory,
+                   localStorageService,
                    $parse,
-                   $q) {
+                   $q,
+                   errorMessages,
+                   $log) {
 
-    var inMemoryToken;
+    var inMemoryToken,
+      wrongPathMsg = errorMessages.WRONG_JSON_PATH;
 
     var loginDao = {};
     loginDao.login = login;
@@ -46,7 +53,6 @@
     loginDao.setToken = setToken;
 
     return loginDao;
-
 
 
     function login(credentials) {
@@ -60,17 +66,16 @@
         if (loginConfig.tokenAgeJsonPath) {
           maxAge = $parse(loginConfig.tokenAgeJsonPath)(response.data);
           if (!maxAge) {
-            console.warn("Can't find maxAgeResponsePath '" +
-                         loginConfig.tokenAgeJsonPath +
-                         "', just so you know")
+            $log.warn(wrongPathMsg +
+                         ' tokenAge , using the default instead');
           }
         }
 
         var token = $parse(loginConfig.tokenJsonPath)(response.data);
         if (!token) {
-          return $q.reject("Couldn't find the token on the response in the path - '"+
-                           loginConfig.tokenJsonPath
-                           +"', check your configuration");
+          var errorMsg = 'Token ' + wrongPathMsg + '"' + loginConfig.tokenJsonPath + '"';
+          $log.error(errorMsg);
+          return $q.reject(new Error(errorMsg));
         }
         logout();
 
@@ -87,32 +92,22 @@
 
     function logout() {
       inMemoryToken = null;
-      var loginCache = getLoginCache();
-      if (loginCache) loginCache.remove(cacheKeys.TOKEN);
+      localStorageService.remove(cacheKeys.TOKEN);
     }
 
-    function setToken(token, maxAge){
+    function setToken(token, maxAge) {
 
-      if (!maxAge){
+      if (!maxAge) {
         maxAge = loginConfig.defaultTokenAge;
       }
       inMemoryToken = token;
-
-      var loginCache = CacheFactory(cacheKeys.LOGIN_CACHE, {maxAge: maxAge});
-      loginCache.put(cacheKeys.TOKEN, token);
+      localStorageService.set(cacheKeys.TOKEN, token);
     }
 
-    function getToken(){
+    function getToken() {
       if (inMemoryToken) return inMemoryToken;
 
-      var loginCache = getLoginCache();
-      if (loginCache){
-        return loginCache.get(cacheKeys.TOKEN);
-      }
-    }
-
-    function getLoginCache() {
-      return CacheFactory.get(cacheKeys.LOGIN_CACHE);
+      return localStorageService.get(cacheKeys.TOKEN);
     }
 
   }

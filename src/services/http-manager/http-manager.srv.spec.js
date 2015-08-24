@@ -7,11 +7,9 @@ xdescribe("loginManager", function () {
     $stateProvider,
     $httpBackend,
     defaultStateNames,
-    cacheKeys,
-    CacheFactory;
+    cacheKeys;
 
   beforeEach(module("ngSecured",
-                    "mocks.CacheFactory",
                     providersSetter));
   providersSetter.$inject = [
     'ngSecured.httpManagerProvider',
@@ -30,7 +28,6 @@ xdescribe("loginManager", function () {
     '$rootScope',
     'ngSecured.defaultStateNames',
     'ngSecured.cacheKeys',
-    'CacheFactory',
     '$httpBackend',
     '$http',
     function (_loginManager,
@@ -38,13 +35,11 @@ xdescribe("loginManager", function () {
               _$rootScope,
               _defaultStateNames,
               _cacheKeys,
-              _CacheFactory,
               _$httpBackend) {
       $state = _$state;
       $rootScope = _$rootScope;
       defaultStateNames = _defaultStateNames;
       cacheKeys = _cacheKeys;
-      CacheFactory = _CacheFactory;
       $httpBackend = _$httpBackend;
       loginManager = _loginManager;
     }]));

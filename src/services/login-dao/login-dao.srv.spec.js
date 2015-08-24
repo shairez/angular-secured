@@ -3,16 +3,16 @@ describe("loginDao", function () {
   var loginDao,
     loginDaoProvider,
     $rootScope,
+    $log,
     $httpBackend,
     cacheKeys,
-    CacheFactory,
+    localStorageService,
     fakeToken,
     fakeMaxAge,
-    defaultMaxAge,
-    loginCache;
+    defaultMaxAge;
 
   beforeEach(module('ngSecured',
-                    'mocks.CacheFactory',
+                    'mocks.localStorageService',
                     providersSetter));
 
   providersSetter.$inject = [
@@ -25,20 +25,23 @@ describe("loginDao", function () {
   beforeEach(inject([
     'ngSecured.loginDao',
     '$rootScope',
+    '$log',
     'ngSecured.defaultStateNames',
     'ngSecured.cacheKeys',
-    'CacheFactory',
+    'localStorageService',
     '$httpBackend',
     '$http',
     function (_loginDao,
               _$rootScope,
+              _$log,
               _defaultStateNames,
               _cacheKeys,
-              _CacheFactory,
+              _localStorageService,
               _$httpBackend) {
       $rootScope = _$rootScope;
+      $log = _$log;
       cacheKeys = _cacheKeys;
-      CacheFactory = _CacheFactory;
+      localStorageService = _localStorageService;
       $httpBackend = _$httpBackend;
       loginDao = _loginDao;
     }]));
@@ -48,13 +51,6 @@ describe("loginDao", function () {
     fakeToken = 'TOKENTOKENTOKEN';
     fakeMaxAge = 320000403;
 
-    loginCache = CacheFactory();
-
-    CacheFactory.get.andCallFake(function (cacheKey) {
-      if (cacheKey === cacheKeys.LOGIN_CACHE) {
-        return loginCache;
-      }
-    })
   });
 
   describe('METHOD: Login', function () {
@@ -108,30 +104,14 @@ describe("loginDao", function () {
       });
 
       Then(function () {
-        // should destroy cache if already exists
-        expect(loginCache.remove).toHaveBeenCalledWith(cacheKeys.TOKEN);
-        // should create new login cache with maxAge
-        expect(CacheFactory).toHaveBeenCalledWith(cacheKeys.LOGIN_CACHE, {maxAge: cacheExpiresIn});
-        // Should save token to cache
-        expect(loginCache.put).toHaveBeenCalledWith(cacheKeys.TOKEN, fakeToken);
-      });
-
-      describe('should use default maxAge if cannot find any', function () {
-        Given(function () {
-          loginConfig.tokenAgeJsonPath = 'wrong.ttl';
-        });
-        When(function () {
-          $rootScope.$apply();
-        });
-        Then(function () {
-          expect(CacheFactory).toHaveBeenCalledWith(cacheKeys.LOGIN_CACHE, {maxAge: defaultMaxAge});
-        });
+        expect(localStorageService.set).toHaveBeenCalledWith(cacheKeys.TOKEN, fakeToken);
       });
 
       describe('should reject the promise if cant find token', function () {
         var errorRespone;
         Given(function () {
           loginConfig.tokenJsonPath = 'wrong.token';
+          $log.reset();
         });
         When(function () {
           loginPromise.catch(function (error) {
@@ -140,9 +120,8 @@ describe("loginDao", function () {
           $rootScope.$apply();
         });
         Then(function () {
-          expect(errorRespone).toBe("Couldn't find the token on the response in the path - '" +
-                                    loginConfig.tokenJsonPath
-                                    + "', check your configuration");
+          expect($log.error.logs.length).toBe(1);
+          expect(errorRespone instanceof Error).toBeTruthy();
         });
       });
 
@@ -178,7 +157,7 @@ describe("loginDao", function () {
 
     describe('When token is in cache, return true', function () {
       Given(function () {
-        loginCache.get.andCallFake(function (cacheKey) {
+        localStorageService.get.and.callFake(function (cacheKey) {
           if (cacheKey === cacheKeys.TOKEN) {
             return fakeToken;
           }
@@ -191,9 +170,6 @@ describe("loginDao", function () {
   });
 
   describe('METHOD: logout', function () {
-    Given(function () {
-      loginCache = CacheFactory();
-    });
 
     When(function () {
       loginDao.logout();
@@ -201,7 +177,7 @@ describe("loginDao", function () {
 
     describe('should delete token from cache', function () {
       Then(function () {
-        expect(loginCache.remove).toHaveBeenCalledWith(cacheKeys.TOKEN);
+        expect(localStorageService.remove).toHaveBeenCalledWith(cacheKeys.TOKEN);
         expect(loginDao.getToken()).toBeUndefined();
       });
     });
@@ -228,17 +204,9 @@ describe("loginDao", function () {
         passedMaxAge = fakeMaxAge;
       });
       Then(function () {
-        expect(CacheFactory).toHaveBeenCalledWith(cacheKeys.LOGIN_CACHE, {maxAge: fakeMaxAge});
-        expect(loginCache.put).toHaveBeenCalledWith(cacheKeys.TOKEN, fakeToken);
+        expect(localStorageService.set).toHaveBeenCalledWith(cacheKeys.TOKEN, fakeToken);
       });
     });
-
-    describe('Should use default max age when the param is undefined', function () {
-      Then(function () {
-        expect(CacheFactory).toHaveBeenCalledWith(cacheKeys.LOGIN_CACHE, {maxAge: fakeMaxAge});
-      });
-    });
-
 
   });
 
@@ -251,8 +219,7 @@ describe("loginDao", function () {
 
     describe('should return cached token when no in memory token', function () {
       Given(function () {
-        loginCache.get.andCallFake(function (cacheKey) {
-
+        localStorageService.get.and.callFake(function (cacheKey) {
           if (cacheKey === cacheKeys.TOKEN) {
             return fakeToken;
           }
@@ -267,7 +234,7 @@ describe("loginDao", function () {
         loginDao.setToken(fakeToken);
       });
       Then(function () {
-        expect(CacheFactory.get).not.toHaveBeenCalled();
+        expect(localStorageService.get).not.toHaveBeenCalled();
       });
     });
 

@@ -12,6 +12,7 @@
   function mockFactory($q) {
     var mock = jasmine.createSpyObj('ngSecured.pageGuard',
       [
+        'init',
         'goToPostLoginPage',
         'goToPostLogoutPage'
       ]);

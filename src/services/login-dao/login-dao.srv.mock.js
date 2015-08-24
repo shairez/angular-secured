@@ -20,7 +20,7 @@
     mock.$deferred = {
       login: $q.defer()
     }
-    mock.login.andReturn(mock.$deferred.login.promise);
+    mock.login.and.returnValue(mock.$deferred.login.promise);
     return mock;
   };
 

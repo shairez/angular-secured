@@ -1,5 +1,5 @@
 angular.module('ngSecured', [
   'ui.router',
-  'angular-cache',
-  'ngSecured.services'
+  'ngSecured.services',
+  'LocalStorageModule'
 ]);

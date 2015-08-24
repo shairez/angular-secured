@@ -5,13 +5,13 @@ describe("pageGuard", function () {
     $state,
     $rootScope,
     $q,
+    $log,
     $stateProvider,
     $httpBackend,
     $controllerProvider,
     permissionsDaoMock,
     defaultStateNames,
     cacheKeys,
-    CacheFactory,
     loginDaoMock,
     fakeToState,
     fakeToParams,
@@ -28,7 +28,6 @@ describe("pageGuard", function () {
     FAKE_UNAUTHORIZED_STATE_NAME;
 
   beforeEach(module("ngSecured",
-                    "mocks.CacheFactory",
                     'mocks.ui.router',
                     'mocks.ngSecured.loginDao',
                     'mocks.ngSecured.permissionsDao',
@@ -52,10 +51,10 @@ describe("pageGuard", function () {
     'ngSecured.pageGuard',
     '$state',
     '$q',
+    '$log',
     '$rootScope',
     'ngSecured.defaultStateNames',
     'ngSecured.cacheKeys',
-    'CacheFactory',
     '$httpBackend',
     '$http',
     'ngSecured.loginDao',
@@ -63,10 +62,10 @@ describe("pageGuard", function () {
     function (_routeSecurityGuard,
               _$state,
               _$q,
+              _$log,
               _$rootScope,
               _defaultStateNames,
               _cacheKeys,
-              _CacheFactory,
               _$httpBackend,
               $http,
               loginDao,
@@ -75,10 +74,10 @@ describe("pageGuard", function () {
       pageGuard = _routeSecurityGuard;
       $state = _$state;
       $q = _$q;
+      $log = _$log;
       $rootScope = _$rootScope;
       defaultStateNames = _defaultStateNames;
       cacheKeys = _cacheKeys;
-      CacheFactory = _CacheFactory;
       $httpBackend = _$httpBackend;
       loginDaoMock = loginDao;
       permissionsDaoMock = permissionsDao;
@@ -87,7 +86,7 @@ describe("pageGuard", function () {
 
 
   beforeEach(function () {
-    DEFAULT_FULLPAGE_STATE_NAME = 'ngSecured.login';
+    DEFAULT_FULLPAGE_STATE_NAME = defaultStateNames.LOGIN;
     FAKE_FULLPAGE_LOGIN_STATE_NAME = 'loginState';
     FAKE_POPUP_LOGIN_STATE_NAME = 'popupLoginState';
     FAKE_TOSTATE_NAME = 'fakeState';
@@ -107,23 +106,21 @@ describe("pageGuard", function () {
     pageGuardProvider.setupPages(fakePagesConfig);
   });
 
-  describe('HANDLER: $stateChangeStart', function () {
-    Given(function () {
-      pageGuard._handleStateChange = jasmine.createSpy('_handleStateChange');
-      pageGuard.setupListeners();
+
+  describe('METHOD: init', function () {
+    Given(function(){
+      $log.reset();
     });
-    When(function () {
-      $rootScope.$broadcast('$stateChangeStart');
-      $rootScope.$apply();
+    When(function(){
+      pageGuard.init();
     });
-    Then(function () {
-      expect(pageGuard._handleStateChange).toHaveBeenCalled();
+    Then(function(){
+       expect($log.error.logs.length).toBe(4);
     });
   });
 
   describe('METHOD: _handleStateChange', function () {
-    var startEventMock,
-      coughtExpception;
+    var startEventMock;
 
     Given(function () {
       startEventMock = jasmine.createSpyObj('startEventMock', ['preventDefault']);
@@ -135,8 +132,6 @@ describe("pageGuard", function () {
                                    fakeToParams,
                                    fakeFromState,
                                    fakeFromParams);
-
-
     });
 
     describe('if state is not secured', function () {
@@ -148,12 +143,12 @@ describe("pageGuard", function () {
     describe('if state is secured', function () {
       var _isRouteApprovedDeferred;
 
-      Given(function () {
+      Given(function mockInnerFunctions() {
         pageGuard._goToLogin = jasmine.createSpy('_goToLogin');
         pageGuard.setLastDeniedStateAndParams = jasmine.createSpy('setLastDeniedStateAndParams');
         pageGuard._isRouteApproved = jasmine.createSpy('routeSecurityGuard._isRouteApproved');
         _isRouteApprovedDeferred = $q.defer();
-        pageGuard._isRouteApproved.andReturn(_isRouteApprovedDeferred.promise);
+        pageGuard._isRouteApproved.and.returnValue(_isRouteApprovedDeferred.promise);
       });
 
       describe('if secured is boolean and true', function () {
@@ -163,7 +158,7 @@ describe("pageGuard", function () {
 
         describe('if user is logged in', function () {
           Given(function () {
-            loginDaoMock.isLoggedIn.andReturn(true);
+            loginDaoMock.isLoggedIn.and.returnValue(true);
           });
           Then(function () {
             expect(startEventMock.preventDefault).not.toHaveBeenCalled();
@@ -172,7 +167,7 @@ describe("pageGuard", function () {
 
         describe('if user is not logged in', function () {
           Given(function () {
-            loginDaoMock.isLoggedIn.andReturn(false);
+            loginDaoMock.isLoggedIn.and.returnValue(false);
           });
           Then(function () {
             expect(startEventMock.preventDefault).toHaveBeenCalled();
@@ -217,7 +212,7 @@ describe("pageGuard", function () {
 
           describe('if user is not logged in', function () {
             Given(function () {
-              loginDaoMock.isLoggedIn.andReturn(false);
+              loginDaoMock.isLoggedIn.and.returnValue(false);
             });
             Then(function () {
               expect(pageGuard.setLastDeniedStateAndParams).toHaveBeenCalledWith(fakeToState, fakeToParams);
@@ -256,7 +251,7 @@ describe("pageGuard", function () {
 
           describe('if user is logged in', function () {
             Given(function () {
-              loginDaoMock.isLoggedIn.andReturn(true);
+              loginDaoMock.isLoggedIn.and.returnValue(true);
               fakePagesConfig.unAuthorized = FAKE_UNAUTHORIZED_STATE_NAME;
             });
             Then(function () {
@@ -347,10 +342,6 @@ describe("pageGuard", function () {
       });
 
     });
-
-
-    // TODO: TEST DIFFERENT STATE TRANSITION
-
   });
 
   describe('METHOD: _isRouteApproved', function () {
@@ -400,7 +391,7 @@ describe("pageGuard", function () {
         Given(function () {
           $controllerProvider.register(securityControllerName, ctrl);
           function ctrl(securityContext) {
-            securityContext.setupListeners.allow();
+            securityContext.guard.allow();
           }
         });
 
@@ -417,7 +408,7 @@ describe("pageGuard", function () {
 
           $controllerProvider.register(securityControllerName, ctrl);
           function ctrl(securityContext) {
-            securityContext.setupListeners.deny(requestApprovalState);
+            securityContext.guard.deny(requestApprovalState);
           }
         });
         Then(function () {
@@ -457,6 +448,9 @@ describe("pageGuard", function () {
   });
 
   describe('METHOD: goToPostLogoutPage', function () {
+    Given(function(){
+      fakePagesConfig.postLogout = FAKE_POST_LOGOUT_STATE_NAME;
+    });
     When(function () {
       pageGuard.goToPostLogoutPage();
     });
@@ -478,13 +472,22 @@ describe("pageGuard", function () {
     describe('if page is not secured, stay in the same page', function () {
       Given(function(){
         $state.current = {
-          data: {
-            secured: false
-          }
         }
       });
       Then(function () {
         expect($state.go).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('if page is login, go to post logout', function () {
+      Given(function(){
+        fakePagesConfig.login = FAKE_FULLPAGE_LOGIN_STATE_NAME;
+        $state.current = {
+          name: FAKE_FULLPAGE_LOGIN_STATE_NAME
+        }
+      });
+      Then(function () {
+        expect($state.go).toHaveBeenCalledWith(FAKE_POST_LOGOUT_STATE_NAME);
       });
     });
   });

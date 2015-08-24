@@ -5,14 +5,13 @@ describe("permissionsDao", function () {
     $rootScope,
     $httpBackend,
     cacheKeys,
-    CacheFactory,
+    localStorageService,
     permissionsConfig,
     fakePermissions,
-    fakePermissionUrl,
-    permissionsCache;
+    fakePermissionUrl;
 
   beforeEach(module("ngSecured",
-                    "mocks.CacheFactory",
+                    "mocks.localStorageService",
                     providersSetter));
 
   providersSetter.$inject = [
@@ -26,17 +25,17 @@ describe("permissionsDao", function () {
     'ngSecured.permissionsDao',
     '$rootScope',
     'ngSecured.cacheKeys',
-    'CacheFactory',
+    'localStorageService',
     '$httpBackend',
     function (_permissionsDao,
               _$rootScope,
               _cacheKeys,
-              _CacheFactory,
+              _localStorageService,
               _$httpBackend) {
       permissionsDao = _permissionsDao;
       $rootScope = _$rootScope;
       cacheKeys = _cacheKeys;
-      CacheFactory = _CacheFactory;
+      localStorageService = _localStorageService;
       $httpBackend = _$httpBackend;
     }]));
 
@@ -44,14 +43,6 @@ describe("permissionsDao", function () {
   beforeEach(function(){
     fakePermissionUrl = '/permissions';
     fakePermissions = ['permissions1', 'permissions2'];
-
-    permissionsCache = CacheFactory();
-    CacheFactory.get.andCallFake(function(cacheKey){
-      if (cacheKey === cacheKeys.PERMISSIONS_CACHE){
-        return permissionsCache;
-      }
-    })
-
   });
 
 
@@ -78,7 +69,7 @@ describe("permissionsDao", function () {
       });
 
       Then(function(){
-        expect(permissionsCache.put).toHaveBeenCalledWith(cacheKeys.PERMISSIONS, returnedPermissions);
+        expect(localStorageService.set).toHaveBeenCalledWith(cacheKeys.PERMISSIONS, returnedPermissions);
         expect(returnedPermissions).toEqual(fakePermissions);
       });
     });
@@ -97,7 +88,7 @@ describe("permissionsDao", function () {
         $rootScope.$apply();
       });
       Then(function(){
-        expect(permissionsCache.get).toHaveBeenCalledWith(cacheKeys.PERMISSIONS);
+        expect(localStorageService.get).toHaveBeenCalledWith(cacheKeys.PERMISSIONS);
         expect(returnedPermissions).toEqual(fakePermissions);
       });
 
@@ -106,7 +97,7 @@ describe("permissionsDao", function () {
           refresh = true;
         });
         Then(function(){
-          expect(permissionsCache.get).not.toHaveBeenCalledWith(cacheKeys.PERMISSIONS);
+          expect(localStorageService.get).not.toHaveBeenCalledWith(cacheKeys.PERMISSIONS);
         });
 
       });

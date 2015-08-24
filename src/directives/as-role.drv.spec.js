@@ -51,7 +51,7 @@ xdescribe("asRole directive", function () {
 
         describe("user is admin, should show dom ", function () {
             Given(function(){
-                ngSecured.includesRole.andReturn(true);
+                ngSecured.includesRole.and.returnValue(true);
                 makeAsRole('admin');
             });
             Then(function(){ expectDomToBeAdded(); });
@@ -60,15 +60,15 @@ xdescribe("asRole directive", function () {
         describe("roles are updated, directive should listen", function () {
             Given(function(){
 
-                ngSecured.getRoles.andReturn(undefined);
-	            ngSecured.includesRole.andReturn(false);
+                ngSecured.getRoles.and.returnValue(undefined);
+	            ngSecured.includesRole.and.returnValue(false);
                 makeAsRole('admin');
             });
             Then(function(){
 
                 expectDomToBeRemoved();
-	            ngSecured.includesRole.andReturn(true);
-	            ngSecured.getRoles.andReturn(['admin']);
+	            ngSecured.includesRole.and.returnValue(true);
+	            ngSecured.getRoles.and.returnValue(['admin']);
                 $rootScope.$apply();
                 expectDomToBeAdded();
             });

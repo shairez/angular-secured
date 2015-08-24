@@ -10,13 +10,11 @@ describe("ngSecured", function () {
     $httpBackend,
     defaultStateNames,
     cacheOptions,
-    CacheFactory,
     loginDaoMock,
     pageGuardMock;
 
 
   beforeEach(module('ngSecured',
-                    'mocks.CacheFactory',
                     'mocks.ngSecured.pageGuard',
                     'mocks.ngSecured.loginDao',
                     providersSetter));
@@ -26,8 +24,6 @@ describe("ngSecured", function () {
   ];
   function providersSetter(_ngSecuredProvider) {
     ngSecuredProvider = _ngSecuredProvider;
-
-
   }
 
 
@@ -37,7 +33,6 @@ describe("ngSecured", function () {
                      '$q',
                      'ngSecured.defaultStateNames',
                      'ngSecured.cacheOptions',
-                     'CacheFactory',
                      '$httpBackend',
                      '$http',
                      'ngSecured.loginDao',
@@ -48,7 +43,6 @@ describe("ngSecured", function () {
                                _$q,
                                _defaultStateNames,
                                _cacheOptions,
-                               _CacheFactory,
                                _$httpBackend,
                                _$http,
                                _loginDao,
@@ -59,7 +53,6 @@ describe("ngSecured", function () {
                        $q = _$q;
                        defaultStateNames = _defaultStateNames;
                        cacheOptions = _cacheOptions;
-                       CacheFactory = _CacheFactory;
                        $httpBackend = _$httpBackend;
                        $http = _$http;
                        loginDaoMock = _loginDao;
@@ -107,7 +100,7 @@ describe("ngSecured", function () {
 
   describe('METHOD: isLoggedIn', function () {
     Given(function(){
-      loginDaoMock.isLoggedIn.andReturn(true);
+      loginDaoMock.isLoggedIn.and.returnValue(true);
     });
     When(function(){
       loggedIn = ngSecured.isLoggedIn();

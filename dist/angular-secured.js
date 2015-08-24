@@ -1,20 +1,20 @@
 angular.module('ngSecured', [
   'ui.router',
-  'angular-cache',
-  'ngSecured.services'
+  'ngSecured.services',
+  'LocalStorageModule'
 ]);
-
-angular.module('ngSecured.services', ['ui.router']);
-
-angular.module('ngSecured')
+;angular.module('ngSecured.services', ['ui.router'])
+  .run(['ngSecured.pageGuard', function(pageGuard){
+    pageGuard.init();
+  }]);
+;angular.module('ngSecured')
     .constant('ngSecured.cacheKeys', {
         LOGIN_CACHE: 'loginCache',
         TOKEN: 'token',
         PERMISSIONS_CACHE: 'permissionsCache',
         PERMISSIONS: 'permissions'
     })
-
-angular.module("ngSecured")
+;angular.module("ngSecured")
     .constant("ngSecured.cacheOptions", {
         "timeout": {
             "FOREVER": "forever"
@@ -31,20 +31,32 @@ angular.module("ngSecured")
         }
 
     })
+;(function(){
 
-;(function(angular){
+    var baseStateName = 'private__ngSecured';
 
-    var baseStateName = "private__ngSecured";
-
-    angular.module("ngSecured")
-        .constant("ngSecured.defaultStateNames", {
-            "BASE_STATE": baseStateName,
-            "NOT_AUTHENTICATED": baseStateName + ".notAuthenticated",
-            "NOT_AUTHORIZED": baseStateName + ".notAuthorized"
+    angular
+      .module('ngSecured.services')
+        .constant('ngSecured.defaultStateNames', {
+            'BASE_STATE': baseStateName,
+            'LOGIN': baseStateName + '.LOGIN',
+            'POST_LOGOUT': baseStateName + '.POST_LOGOUT',
+            'POST_LOGIN': baseStateName + '.POST_LOGIN',
+            'NOT_AUTHENTICATED': baseStateName + '.notAuthenticated',
+            'NOT_AUTHORIZED': baseStateName + '.notAuthorized'
         })
 
-})(angular);
-angular.module("ngSecured")
+})();
+;(function(){
+    angular
+      .module('ngSecured')
+      .constant('ngSecured.errorMessages',{
+        WRONG_JSON_PATH: 'Json Path was not defined or is not correct, value was: '
+
+
+      });
+})();
+;angular.module("ngSecured")
 .directive("asRole", ["ngSecured", "$animate",
                        function(ngSecured, $animate){
         return {
@@ -106,8 +118,7 @@ angular.module("ngSecured")
                 $scope.$watch(function(){return ngSecured.getRoles();}, invalidateDom);
             }
         }
-    }])
-(function () {
+    }]);(function () {
 
   angular
     .module("ngSecured")
@@ -162,8 +173,7 @@ angular.module("ngSecured")
   }
 
 })();
-
-(function () {
+;(function () {
 
   angular
     .module('ngSecured')
@@ -190,18 +200,25 @@ angular.module("ngSecured")
   }
 
 
-  factory.$inject = ['$http',
-                     'ngSecured.cacheKeys',
-                     'CacheFactory',
-                     '$parse',
-                     '$q'];
+  factory.$inject =
+    ['$http',
+     'ngSecured.cacheKeys',
+     'localStorageService',
+     '$parse',
+     '$q',
+     'ngSecured.errorMessages',
+     '$log'
+    ];
   function factory($http,
                    cacheKeys,
-                   CacheFactory,
+                   localStorageService,
                    $parse,
-                   $q) {
+                   $q,
+                   errorMessages,
+                   $log) {
 
-    var inMemoryToken;
+    var inMemoryToken,
+      wrongPathMsg = errorMessages.WRONG_JSON_PATH;
 
     var loginDao = {};
     loginDao.login = login;
@@ -211,7 +228,6 @@ angular.module("ngSecured")
     loginDao.setToken = setToken;
 
     return loginDao;
-
 
 
     function login(credentials) {
@@ -225,17 +241,16 @@ angular.module("ngSecured")
         if (loginConfig.tokenAgeJsonPath) {
           maxAge = $parse(loginConfig.tokenAgeJsonPath)(response.data);
           if (!maxAge) {
-            console.warn("Can't find maxAgeResponsePath '" +
-                         loginConfig.tokenAgeJsonPath +
-                         "', just so you know")
+            $log.warn(wrongPathMsg +
+                         ' tokenAge , using the default instead');
           }
         }
 
         var token = $parse(loginConfig.tokenJsonPath)(response.data);
         if (!token) {
-          return $q.reject("Couldn't find the token on the response in the path - '"+
-                           loginConfig.tokenJsonPath
-                           +"', check your configuration");
+          var errorMsg = 'Token ' + wrongPathMsg + '"' + loginConfig.tokenJsonPath + '"';
+          $log.error(errorMsg);
+          return $q.reject(new Error(errorMsg));
         }
         logout();
 
@@ -252,82 +267,66 @@ angular.module("ngSecured")
 
     function logout() {
       inMemoryToken = null;
-      var loginCache = getLoginCache();
-      if (loginCache) loginCache.remove(cacheKeys.TOKEN);
+      localStorageService.remove(cacheKeys.TOKEN);
     }
 
-    function setToken(token, maxAge){
+    function setToken(token, maxAge) {
 
-      if (!maxAge){
+      if (!maxAge) {
         maxAge = loginConfig.defaultTokenAge;
       }
       inMemoryToken = token;
-
-      var loginCache = CacheFactory(cacheKeys.LOGIN_CACHE, {maxAge: maxAge});
-      loginCache.put(cacheKeys.TOKEN, token);
+      localStorageService.set(cacheKeys.TOKEN, token);
     }
 
-    function getToken(){
+    function getToken() {
       if (inMemoryToken) return inMemoryToken;
 
-      var loginCache = getLoginCache();
-      if (loginCache){
-        return loginCache.get(cacheKeys.TOKEN);
-      }
-    }
-
-    function getLoginCache() {
-      return CacheFactory.get(cacheKeys.LOGIN_CACHE);
+      return localStorageService.get(cacheKeys.TOKEN);
     }
 
   }
 
 })();
-
-(function () {
+;(function () {
 
   angular
     .module('ngSecured')
     .provider('ngSecured', provider);
 
   provider.$inject = [
-    '$stateProvider',
+    'localStorageServiceProvider',
     '$httpProvider',
     'ngSecured.loginDaoProvider',
     'ngSecured.permissionsDaoProvider',
     'ngSecured.pageGuardProvider'
   ];
 
-  function provider($stateProvider,
+  function provider(localStorageServiceProvider,
                     $httpProvider,
                     loginDaoProvider,
                     permissionsDaoProvider,
                     pageGuardProvider) {
 
     var config = {
+      tokenAgeJsonPath: '',
+      tokenJsonPath: '',
+      loginUrl: '',
+      permissionsUrl: '',
       pages: {
-        tokenAgeJsonPath: '',
-        tokenJsonPath: '',
-        loginUrl: '',
-        permissionsUrl: '',
-        pages: {
-          login: 'ngSecured.login',
-          loginPopup: null,
-          unAuthorized: null,
-          postLogin: null,
-          postLogout: null
-        }
+        login: 'ngSecured.login',
+        loginPopup: null,
+        unAuthorized: null,
+        postLogin: null,
+        postLogout: null
       }
     };
 
-    //$stateProvider.state(defaultStateNames.BASE_STATE, {});
-    //$stateProvider.state(defaultStateNames.NOT_AUTHENTICATED,
-    //  {views: {"@": {template: "please login to see this page."}}});
-    //$stateProvider.state(defaultStateNames.NOT_AUTHORIZED,
-    //  {views: {"@": {template: "You are not .authorized to see this page."}}});
 
     this.secure = function (userConfig) {
       angular.extend(config, userConfig);
+      localStorageServiceProvider.setPrefix('ngSecured');
+
       loginDaoProvider.setup(config);
       permissionsDaoProvider.setup(config);
       pageGuardProvider.setupPages(config.pages);
@@ -354,18 +353,18 @@ angular.module("ngSecured")
           .login(credentials)
           .then(success);
 
-        function success(response){
+        function success(response) {
           pageGuard.goToPostLoginPage();
           return response;
         }
       }
 
-      function logout(){
+      function logout() {
         loginDao.logout();
         pageGuard.goToPostLogoutPage();
       }
 
-      function isLoggedIn(){
+      function isLoggedIn() {
         return loginDao.isLoggedIn();
       }
 
@@ -376,29 +375,43 @@ angular.module("ngSecured")
 
 
 })();
-
-(function () {
+;(function () {
 
   angular
     .module("ngSecured.services")
     .provider('ngSecured.pageGuard', provider);
 
+  provider.$inject = [
+    '$stateProvider',
+    'ngSecured.defaultStateNames'
+  ];
 
-  var pages = {
-    login: 'ngSecured.login',
-    loginPopup: null,
-    postLogin: null,
-    unAuthorized: null
-  };
+  function provider($stateProvider,
+                    defaultStateNames) {
 
-  provider.$inject = ['$stateProvider'];
+    var pages = {
+      login: defaultStateNames.LOGIN,
+      loginPopup: null,
+      postLogin: defaultStateNames.POST_LOGIN,
+      postLogout: defaultStateNames.POST_LOGOUT,
+      unAuthorized: defaultStateNames.NOT_AUTHORIZED
+    };
 
-  function provider($stateProvider) {
+    (function configureDefaultStates() {
 
-    //$stateProvider.state(
-    //  pages.login,
-    //  {template: 'Please configure a login state'}
-    //);
+      $stateProvider.state(defaultStateNames.BASE_STATE, {});
+      $stateProvider.state(defaultStateNames.NOT_AUTHENTICATED,
+        {views: {"@": {template: "please login to see this page."}}});
+      $stateProvider.state(defaultStateNames.NOT_AUTHORIZED,
+        {views: {"@": {template: "You are not .authorized to see this page."}}});
+      $stateProvider.state(defaultStateNames.LOGIN,
+        {views: {'@': {template: 'Please configure a login state'}}});
+      $stateProvider.state(defaultStateNames.POST_LOGIN,
+        {views: {'@': {template: 'Please configure a post logout state'}}});
+      $stateProvider.state(defaultStateNames.POST_LOGOUT,
+        {views: {'@': {template: 'Please configure a post login state'}}});
+    })();
+
 
     this.setupPages = setupPages;
     this.$get = factory;
@@ -406,182 +419,208 @@ angular.module("ngSecured")
     function setupPages(config) {
       angular.extend(pages, config);
     }
-  }
 
 
-  factory.$inject = [
-    '$rootScope',
-    '$q',
-    '$controller',
-    '$state',
-    'ngSecured.loginDao',
-    'ngSecured.permissionsDao'
-  ];
-  function factory($rootScope,
-                   $q,
-                   $controller,
-                   $state,
-                   loginDao,
-                   permissionsDao) {
+    factory.$inject = [
+      '$rootScope',
+      '$q',
+      '$parse',
+      '$log',
+      '$controller',
+      '$state',
+      'ngSecured.loginDao',
+      'ngSecured.permissionsDao'
+    ];
+    function factory($rootScope,
+                     $q,
+                     $parse,
+                     $log,
+                     $controller,
+                     $state,
+                     loginDao,
+                     permissionsDao) {
 
-    var lastDeniedStateAndParams;
+      var lastDeniedStateAndParams;
 
-    var pageGuard = {};
-    pageGuard.setupListeners = setupListeners;
-    pageGuard.goToPostLoginPage = goToPostLoginPage;
-    pageGuard.goToPostLogoutPage = goToPostLogoutPage;
-    pageGuard.setLastDeniedStateAndParams = setLastDeniedStateAndParams;
-    pageGuard.getLastDeniedStateAndParams = getLastDeniedStateAndParams;
+      var pageGuard = {};
+      pageGuard.init = init;
+      pageGuard.goToPostLoginPage = goToPostLoginPage;
+      pageGuard.goToPostLogoutPage = goToPostLogoutPage;
+      pageGuard.setLastDeniedStateAndParams = setLastDeniedStateAndParams;
+      pageGuard.getLastDeniedStateAndParams = getLastDeniedStateAndParams;
 
-    // Private methods for testing, you should not use them directly
-    pageGuard._handleStateChange = _handleStateChange;
-    pageGuard._goToLogin = _goToLogin;
-    pageGuard._isRouteApproved = _isRouteApproved;
+      // Private methods for testing, you should not use them directly
+      pageGuard._handleStateChange = _handleStateChange;
+      pageGuard._goToLogin = _goToLogin;
+      pageGuard._isRouteApproved = _isRouteApproved;
 
-    return pageGuard;
+      return pageGuard;
 
-    function setupListeners() {
-      $rootScope.$on('$stateChangeStart', pageGuard._handleStateChange);
-    }
-
-    function _handleStateChange(event, toState, toParams, fromState, fromParams) {
-      var secured,
-        showPopupIfConfigured = true;
-      if (toState.data) {
-        secured = toState.data.secured;
+      function init(){
+        setupListeners();
+        showWarnings();
       }
-      if (secured) {
 
-        if (secured === true && !loginDao.isLoggedIn()) {
-          event.preventDefault();
-          pageGuard.setLastDeniedStateAndParams(toState, toParams);
-          pageGuard._goToLogin(fromState.name, showPopupIfConfigured);
+      function showWarnings(){
+        if (pages.login === defaultStateNames.LOGIN){
+          warnAboutState('Login');
         }
-
-        if (angular.isString(secured)) {
-          event.preventDefault();
-          verifySecurityPolicy(secured);
+        if (pages.unAuthorized === defaultStateNames.NOT_AUTHORIZED){
+          warnAboutState('unAuthorized');
         }
+        if (pages.postLogin === defaultStateNames.POST_LOGIN){
+          warnAboutState('postLogin');
+        }
+        if (pages.postLogout === defaultStateNames.POST_LOGOUT){
+          warnAboutState('postLogout');
+        }
+        function warnAboutState(stateType){
+          $log.error('In ngSecuredProvider.secure, you need to set the page name of "' + stateType + '"');
+        }
+      }
 
-        function verifySecurityPolicy(securityCtrlName){
-          pageGuard
-            ._isRouteApproved(securityCtrlName)
-            .then(promiseSuccess);
+      function setupListeners() {
+        $rootScope.$on('$stateChangeStart', pageGuard._handleStateChange);
+      }
 
-          function promiseSuccess(response) {
-            var stateName,
-              params,
-              requestApprovalState = response.requestApprovalState;
+      function _handleStateChange(event, toState, toParams, fromState, fromParams) {
+        var secured,
+          showPopupIfConfigured = true;
+        if (toState.data) {
+          secured = toState.data.secured;
+        }
+        if (secured) {
 
-            if (response.answer === true) {
-              $state.go(toState.name, toParams);
+          if (secured === true && !loginDao.isLoggedIn()) {
+            event.preventDefault();
+            pageGuard.setLastDeniedStateAndParams(toState, toParams);
+            pageGuard._goToLogin(fromState.name, showPopupIfConfigured);
+          }
 
-            }else if (requestApprovalState) {
+          if (angular.isString(secured)) {
+            event.preventDefault();
+            verifySecurityPolicy(secured);
+          }
 
-              if (angular.isString(requestApprovalState)) {
-                stateName = requestApprovalState;
-              } else if (angular.isObject(requestApprovalState)) {
-                stateName = requestApprovalState.name;
-                params = requestApprovalState.params;
-              }
+          function verifySecurityPolicy(securityCtrlName) {
+            pageGuard
+              ._isRouteApproved(securityCtrlName)
+              .then(promiseSuccess);
 
-              if (stateName) {
-                $state.go(stateName, params);
+            function promiseSuccess(response) {
+              var stateName,
+                params,
+                requestApprovalState = response.requestApprovalState;
+
+              if (response.answer === true) {
+                $state.go(toState.name, toParams);
+
+              } else if (requestApprovalState) {
+
+                if (angular.isString(requestApprovalState)) {
+                  stateName = requestApprovalState;
+                } else if (angular.isObject(requestApprovalState)) {
+                  stateName = requestApprovalState.name;
+                  params = requestApprovalState.params;
+                }
+
+                if (stateName) {
+                  $state.go(stateName, params);
+                } else {
+                  throw new Error('requestApprovalState must have a "name" property');
+                }
+
+              } else if (loginDao.isLoggedIn()) {
+                $state.go(pages.unAuthorized);
               } else {
-                throw new Error('requestApprovalState must have a "name" property');
+                pageGuard.setLastDeniedStateAndParams(toState, toParams);
+                pageGuard._goToLogin(fromState.name, showPopupIfConfigured);
               }
 
-            } else if (loginDao.isLoggedIn()) {
-              $state.go(pages.unAuthorized);
-            }else{
-              pageGuard.setLastDeniedStateAndParams(toState, toParams);
-              pageGuard._goToLogin(fromState.name, showPopupIfConfigured);
             }
-
           }
         }
       }
-    }
 
-    function setLastDeniedStateAndParams(state, params){
-      lastDeniedStateAndParams = {
-        state: state,
-        params: params
+      function setLastDeniedStateAndParams(state, params) {
+        lastDeniedStateAndParams = {
+          state: state,
+          params: params
+        }
+      }
+
+      function getLastDeniedStateAndParams() {
+        return lastDeniedStateAndParams;
+      }
+
+      function _goToLogin(fromStateName, showPopupIfConfigured) {
+        if (fromStateName !== '' && showPopupIfConfigured) {
+          $state.go(pages.loginPopup);
+        } else {
+          $state.go(pages.login);
+        }
+      }
+
+      function _isRouteApproved(securityControllerName) {
+        var deferred,
+          securityGuard = {},
+          securityContext,
+          response = {};
+
+        deferred = $q.defer();
+        if (!securityControllerName) {
+          deferred.reject('You must define pass a valid securityController name');
+        }
+        securityGuard.allow = function () {
+          response.answer = true;
+          deferred.resolve(response);
+        }
+
+        securityGuard.deny = function (requestApprovalState) {
+          response.answer = false;
+          response.requestApprovalState = requestApprovalState;
+          deferred.resolve(response);
+        }
+
+        permissionsDao.getPermissions()
+          .then(permissionReturned);
+
+        function permissionReturned(permissions) {
+          securityContext = {
+            guard: securityGuard,
+            permissions: permissions
+          };
+
+          var controllerLocals = {
+            securityContext: securityContext
+          };
+          $controller(securityControllerName, controllerLocals);
+        }
+
+        return deferred.promise;
+      }
+
+      function goToPostLoginPage() {
+        if (lastDeniedStateAndParams) {
+          $state.go(lastDeniedStateAndParams.state.name,
+                    lastDeniedStateAndParams.params);
+        } else {
+          $state.go(pages.postLogin);
+        }
+      }
+
+      function goToPostLogoutPage() {
+        var secured = $parse('current.data.secured')($state);
+        if (secured || $state.current.name === pages.login) {
+          $state.go(pages.postLogout);
+        }
       }
     }
-
-    function getLastDeniedStateAndParams(){
-      return lastDeniedStateAndParams;
-    }
-
-    function _goToLogin(fromStateName, showPopupIfConfigured) {
-      if (fromStateName !== '' && showPopupIfConfigured) {
-        $state.go(pages.loginPopup);
-      } else {
-        $state.go(pages.login);
-      }
-    }
-
-    function _isRouteApproved(securityControllerName) {
-      var deferred,
-        securityGuard = {},
-        securityContext,
-        response = {};
-
-      deferred = $q.defer();
-      if (!securityControllerName) {
-        deferred.reject('You must define pass a valid securityController name');
-      }
-      securityGuard.allow = function () {
-        response.answer = true;
-        deferred.resolve(response);
-      }
-
-      securityGuard.deny = function (requestApprovalState) {
-        response.answer = false;
-        response.requestApprovalState = requestApprovalState;
-        deferred.resolve(response);
-      }
-
-      permissionsDao.getPermissions()
-        .then(permissionReturned);
-
-      function permissionReturned(permissions){
-        securityContext = {
-          setupListeners: securityGuard,
-          permissions: permissions
-        };
-
-        var controllerLocals = {
-          securityContext: securityContext
-        };
-        $controller(securityControllerName, controllerLocals);
-      }
-
-      return deferred.promise;
-    }
-
-    function goToPostLoginPage() {
-      if (lastDeniedStateAndParams){
-        $state.go(lastDeniedStateAndParams.state.name,
-                  lastDeniedStateAndParams.params);
-      }else{
-        $state.go(pages.postLogin);
-      }
-    }
-
-    function goToPostLogoutPage(){
-      if ($state.current && $state.current.data.secured){
-        $state.go(pages.postLogout);
-      }
-    }
-
 
   }
 
 })();
-
-(function () {
+;(function () {
 
   angular
     .module('ngSecured.services')
@@ -605,12 +644,12 @@ angular.module("ngSecured")
 
     factory.$inject = [
       '$http',
-      'CacheFactory',
+      'localStorageService',
       'ngSecured.cacheKeys',
       '$q'
     ];
     function factory($http,
-                     CacheFactory,
+                     localStorageService,
                      cacheKeys,
                      $q) {
 
@@ -633,27 +672,17 @@ angular.module("ngSecured")
 
         function success(response) {
           var permissions = response.data;
-          var permissionsCache = getPermissionsCache();
-          permissionsCache.put(cacheKeys.PERMISSIONS, permissions);
+          localStorageService.set(cacheKeys.PERMISSIONS, permissions);
           cachedPermissions = permissions;
           return permissions;
         }
-      }
-
-      function getPermissionsCache() {
-        var permissionsCache = CacheFactory.get(cacheKeys.PERMISSIONS_CACHE);
-        if (!permissionsCache) {
-          permissionsCache = CacheFactory(cacheKeys.PERMISSIONS_CACHE);
-        }
-        return permissionsCache;
       }
 
       function getCachedPermissions() {
         if (cachedPermissions){
           return cachedPermissions;
         }
-        var permissionsCache = getPermissionsCache();
-        cachedPermissions = permissionsCache.get(cacheKeys.PERMISSIONS);
+        cachedPermissions = localStorageService.get(cacheKeys.PERMISSIONS);
         return cachedPermissions;
       }
 

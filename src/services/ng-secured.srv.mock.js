@@ -1,14 +1,23 @@
-angular.module("mocks.ngSecured", [])
-    .factory("ngSecured", function ($q) {
+(function () {
 
-        var mock = jasmine.createSpyObj("ngSecured",
-            [
-              'login',
-              'logout',
-              'isLoggedIn'
-            ]);
-        mock.$deferred = {
+  angular
+    .module("mocks.ngSecured", [])
+    .factory("ngSecured", factory);
 
-        }
-        return mock;
-    });
+  function factory($q) {
+
+    var mock = jasmine.createSpyObj("ngSecured",
+      [
+        'login',
+        'logout',
+        'isLoggedIn'
+      ]);
+
+    mock.$deferred = {
+      login: $q.defer()
+    };
+    mock.login.and.returnValue(mock.$deferred.login.promise);
+
+    return mock;
+  }
+})();

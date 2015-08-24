@@ -16,7 +16,7 @@
     mock.$deferred = {
       getPermissions: $q.defer()
     }
-    mock.getPermissions.andReturn(mock.$deferred.getPermissions.promise);
+    mock.getPermissions.and.returnValue(mock.$deferred.getPermissions.promise);
     return mock;
   };
 

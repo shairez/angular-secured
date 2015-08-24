@@ -5,43 +5,38 @@
     .provider('ngSecured', provider);
 
   provider.$inject = [
-    '$stateProvider',
+    'localStorageServiceProvider',
     '$httpProvider',
     'ngSecured.loginDaoProvider',
     'ngSecured.permissionsDaoProvider',
     'ngSecured.pageGuardProvider'
   ];
 
-  function provider($stateProvider,
+  function provider(localStorageServiceProvider,
                     $httpProvider,
                     loginDaoProvider,
                     permissionsDaoProvider,
                     pageGuardProvider) {
 
     var config = {
+      tokenAgeJsonPath: '',
+      tokenJsonPath: '',
+      loginUrl: '',
+      permissionsUrl: '',
       pages: {
-        tokenAgeJsonPath: '',
-        tokenJsonPath: '',
-        loginUrl: '',
-        permissionsUrl: '',
-        pages: {
-          login: 'ngSecured.login',
-          loginPopup: null,
-          unAuthorized: null,
-          postLogin: null,
-          postLogout: null
-        }
+        login: 'ngSecured.login',
+        loginPopup: null,
+        unAuthorized: null,
+        postLogin: null,
+        postLogout: null
       }
     };
 
-    //$stateProvider.state(defaultStateNames.BASE_STATE, {});
-    //$stateProvider.state(defaultStateNames.NOT_AUTHENTICATED,
-    //  {views: {"@": {template: "please login to see this page."}}});
-    //$stateProvider.state(defaultStateNames.NOT_AUTHORIZED,
-    //  {views: {"@": {template: "You are not .authorized to see this page."}}});
 
     this.secure = function (userConfig) {
       angular.extend(config, userConfig);
+      localStorageServiceProvider.setPrefix('ngSecured');
+
       loginDaoProvider.setup(config);
       permissionsDaoProvider.setup(config);
       pageGuardProvider.setupPages(config.pages);
@@ -68,18 +63,18 @@
           .login(credentials)
           .then(success);
 
-        function success(response){
+        function success(response) {
           pageGuard.goToPostLoginPage();
           return response;
         }
       }
 
-      function logout(){
+      function logout() {
         loginDao.logout();
         pageGuard.goToPostLogoutPage();
       }
 
-      function isLoggedIn(){
+      function isLoggedIn() {
         return loginDao.isLoggedIn();
       }
 

@@ -15,7 +15,7 @@ module.exports = function (config) {
       'bower_components/angular/angular.js',
       'bower_components/angular-mocks/angular-mocks.js',
       'bower_components/angular-ui-router/release/angular-ui-router.js',
-      'bower_components/angular-cache/dist/angular-cache.js',
+      'bower_components/angular-local-storage/dist/angular-local-storage.js',
       'src/**/*.mdl.js',
       'src/**/*.js',
       'src/**/*.mock.js',

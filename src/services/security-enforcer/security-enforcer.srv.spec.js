@@ -1,7 +1,7 @@
-describe("pageGuard", function () {
+describe("securityEnforcer", function () {
 
-  var pageGuard,
-    pageGuardProvider,
+  var securityEnforcer,
+    securityEnforcerProvider,
     $state,
     $rootScope,
     $q,
@@ -10,9 +10,10 @@ describe("pageGuard", function () {
     $httpBackend,
     $controllerProvider,
     permissionsDaoMock,
+    localStorageServiceMock,
     defaultStateNames,
     cacheKeys,
-    loginDaoMock,
+    authAdapterMock,
     fakeToState,
     fakeToParams,
     fakeFromState,
@@ -22,33 +23,33 @@ describe("pageGuard", function () {
     FAKE_TOSTATE_NAME,
     FAKE_FROMSTATE_NAME,
     FAKE_FULLPAGE_LOGIN_STATE_NAME,
-    FAKE_POPUP_LOGIN_STATE_NAME,
     FAKE_POST_LOGIN_STATE_NAME,
     FAKE_POST_LOGOUT_STATE_NAME,
     FAKE_UNAUTHORIZED_STATE_NAME;
 
-  beforeEach(module("ngSecured",
+  beforeEach(module("ngSecured.services",
                     'mocks.ui.router',
-                    'mocks.ngSecured.loginDao',
+                    'mocks.ngSecured.authAdapter',
                     'mocks.ngSecured.permissionsDao',
+                    'mocks.localStorageService',
                     providersSetter));
 
   providersSetter.$inject = [
-    'ngSecured.pageGuardProvider',
+    'ngSecured.securityEnforcerProvider',
     '$stateProvider',
     '$controllerProvider'
   ];
-  function providersSetter(_pageGuardProvider,
+  function providersSetter(_securityEnforcerProvider,
                            _$stateProvider,
                            _$controllerProvider) {
-    pageGuardProvider = _pageGuardProvider;
+    securityEnforcerProvider = _securityEnforcerProvider;
     $stateProvider = _$stateProvider;
     $controllerProvider = _$controllerProvider;
   }
 
 
   beforeEach(inject([
-    'ngSecured.pageGuard',
+    'ngSecured.securityEnforcer',
     '$state',
     '$q',
     '$log',
@@ -57,9 +58,10 @@ describe("pageGuard", function () {
     'ngSecured.cacheKeys',
     '$httpBackend',
     '$http',
-    'ngSecured.loginDao',
+    'ngSecured.authAdapter',
+    'localStorageService',
     'ngSecured.permissionsDao',
-    function (_routeSecurityGuard,
+    function (_securityEnforcer,
               _$state,
               _$q,
               _$log,
@@ -68,10 +70,11 @@ describe("pageGuard", function () {
               _cacheKeys,
               _$httpBackend,
               $http,
-              loginDao,
+              authAdapter,
+              _localStorageService,
               permissionsDao) {
 
-      pageGuard = _routeSecurityGuard;
+      securityEnforcer = _securityEnforcer;
       $state = _$state;
       $q = _$q;
       $log = _$log;
@@ -79,7 +82,8 @@ describe("pageGuard", function () {
       defaultStateNames = _defaultStateNames;
       cacheKeys = _cacheKeys;
       $httpBackend = _$httpBackend;
-      loginDaoMock = loginDao;
+      authAdapterMock = authAdapter;
+      localStorageServiceMock = _localStorageService;
       permissionsDaoMock = permissionsDao;
 
     }]));
@@ -88,7 +92,6 @@ describe("pageGuard", function () {
   beforeEach(function () {
     DEFAULT_FULLPAGE_STATE_NAME = defaultStateNames.LOGIN;
     FAKE_FULLPAGE_LOGIN_STATE_NAME = 'loginState';
-    FAKE_POPUP_LOGIN_STATE_NAME = 'popupLoginState';
     FAKE_TOSTATE_NAME = 'fakeState';
     FAKE_FROMSTATE_NAME = 'fakeFromState';
     FAKE_UNAUTHORIZED_STATE_NAME = 'fakeUnauthorizedState';
@@ -103,19 +106,19 @@ describe("pageGuard", function () {
   });
 
   When(function () {
-    pageGuardProvider.setupPages(fakePagesConfig);
+    securityEnforcerProvider.setupPages(fakePagesConfig);
   });
 
 
   describe('METHOD: init', function () {
-    Given(function(){
+    Given(function () {
       $log.reset();
     });
-    When(function(){
-      pageGuard.init();
+    When(function () {
+      securityEnforcer.init();
     });
-    Then(function(){
-       expect($log.error.logs.length).toBe(4);
+    Then(function () {
+      expect($log.error.logs.length).toBe(4);
     });
   });
 
@@ -127,7 +130,7 @@ describe("pageGuard", function () {
     });
 
     When(function () {
-      pageGuard._handleStateChange(startEventMock,
+      securityEnforcer._handleStateChange(startEventMock,
                                    fakeToState,
                                    fakeToParams,
                                    fakeFromState,
@@ -141,14 +144,14 @@ describe("pageGuard", function () {
     });
 
     describe('if state is secured', function () {
-      var _isRouteApprovedDeferred;
+      var _isPageApprovedDeferred;
 
       Given(function mockInnerFunctions() {
-        pageGuard._goToLogin = jasmine.createSpy('_goToLogin');
-        pageGuard.setLastDeniedStateAndParams = jasmine.createSpy('setLastDeniedStateAndParams');
-        pageGuard._isRouteApproved = jasmine.createSpy('routeSecurityGuard._isRouteApproved');
-        _isRouteApprovedDeferred = $q.defer();
-        pageGuard._isRouteApproved.and.returnValue(_isRouteApprovedDeferred.promise);
+        securityEnforcer._goToLogin = jasmine.createSpy('_goToLogin');
+        securityEnforcer.setLastDeniedStateAndParams = jasmine.createSpy('setLastDeniedStateAndParams');
+        securityEnforcer._isPageApproved = jasmine.createSpy('securityEnforcer._isPageApproved');
+        _isPageApprovedDeferred = $q.defer();
+        securityEnforcer._isPageApproved.and.returnValue(_isPageApprovedDeferred.promise);
       });
 
       describe('if secured is boolean and true', function () {
@@ -158,7 +161,7 @@ describe("pageGuard", function () {
 
         describe('if user is logged in', function () {
           Given(function () {
-            loginDaoMock.isLoggedIn.and.returnValue(true);
+            authAdapterMock.isLoggedIn.and.returnValue(true);
           });
           Then(function () {
             expect(startEventMock.preventDefault).not.toHaveBeenCalled();
@@ -167,12 +170,12 @@ describe("pageGuard", function () {
 
         describe('if user is not logged in', function () {
           Given(function () {
-            loginDaoMock.isLoggedIn.and.returnValue(false);
+            authAdapterMock.isLoggedIn.and.returnValue(false);
           });
           Then(function () {
             expect(startEventMock.preventDefault).toHaveBeenCalled();
-            expect(pageGuard.setLastDeniedStateAndParams).toHaveBeenCalledWith(fakeToState, fakeToParams);
-            expect(pageGuard._goToLogin).toHaveBeenCalledWith(FAKE_FROMSTATE_NAME, true);
+            expect(securityEnforcer.setLastDeniedStateAndParams).toHaveBeenCalledWith(fakeToState, fakeToParams);
+            expect(securityEnforcer._goToLogin).toHaveBeenCalled();
           });
 
         });
@@ -181,17 +184,18 @@ describe("pageGuard", function () {
       describe('if secured is string', function () {
         Given(function () {
           fakeToState.data = {secured: 'fakeSecurityPolicy.ctrl'};
+          fakeToParams = {param: 'value'};
         });
 
 
         Then(function () {
           expect(startEventMock.preventDefault).toHaveBeenCalled();
-          expect(pageGuard._isRouteApproved).toHaveBeenCalledWith(fakeToState.data.secured);
+          expect(securityEnforcer._isPageApproved).toHaveBeenCalledWith(fakeToState.data.secured, fakeToParams);
         });
 
         describe('if promise result is true', function () {
           When(function () {
-            _isRouteApprovedDeferred.resolve({answer: true});
+            _isPageApprovedDeferred.resolve({answer: true});
             $rootScope.$apply();
           });
 
@@ -206,17 +210,17 @@ describe("pageGuard", function () {
             response = {answer: false};
           });
           When(function () {
-            _isRouteApprovedDeferred.resolve(response);
+            _isPageApprovedDeferred.resolve(response);
             $rootScope.$apply();
           });
 
           describe('if user is not logged in', function () {
             Given(function () {
-              loginDaoMock.isLoggedIn.and.returnValue(false);
+              authAdapterMock.isLoggedIn.and.returnValue(false);
             });
             Then(function () {
-              expect(pageGuard.setLastDeniedStateAndParams).toHaveBeenCalledWith(fakeToState, fakeToParams);
-              expect(pageGuard._goToLogin).toHaveBeenCalledWith(FAKE_FROMSTATE_NAME, true);
+              expect(securityEnforcer.setLastDeniedStateAndParams).toHaveBeenCalledWith(fakeToState, fakeToParams);
+              expect(securityEnforcer._goToLogin).toHaveBeenCalled();
             });
           });
 
@@ -251,12 +255,27 @@ describe("pageGuard", function () {
 
           describe('if user is logged in', function () {
             Given(function () {
-              loginDaoMock.isLoggedIn.and.returnValue(true);
+              authAdapterMock.isLoggedIn.and.returnValue(true);
               fakePagesConfig.unAuthorized = FAKE_UNAUTHORIZED_STATE_NAME;
             });
             Then(function () {
               expect($state.go).toHaveBeenCalledWith(FAKE_UNAUTHORIZED_STATE_NAME);
             });
+          });
+        });
+
+        describe('if promise rejected', function () {
+          var errorResponse;
+          Given(function(){
+            errorResponse = 'Permissions is not set';
+            $log.reset();
+          });
+          When(function(){
+            _isPageApprovedDeferred.reject(errorResponse);
+            $rootScope.$apply();
+          });
+          Then(function(){
+            expect($log.error.logs.length).toBe(1);
           });
         });
       });
@@ -268,36 +287,38 @@ describe("pageGuard", function () {
   describe('METHODS: setLastDeinedState, getLastDeniedState', function () {
     var lastDeniedState,
       lastDeniedStateParams,
+      lastDeniedStateAndParams,
       returnedLastDeniedStateAndParams;
     Given(function () {
       lastDeniedState = {name: FAKE_TOSTATE_NAME};
       lastDeniedStateParams = fakeToParams;
-    });
-    When(function () {
-      pageGuard.setLastDeniedStateAndParams(lastDeniedState, lastDeniedStateParams);
-      returnedLastDeniedStateAndParams = pageGuard.getLastDeniedStateAndParams();
-    });
-    Then(function () {
-      expect(returnedLastDeniedStateAndParams).toEqual({
+      lastDeniedStateAndParams = {
         state: lastDeniedState,
         params: lastDeniedStateParams
-      })
+      };
+    });
+    When(function () {
+      securityEnforcer.setLastDeniedStateAndParams(lastDeniedState, lastDeniedStateParams);
+      returnedLastDeniedStateAndParams = securityEnforcer.getLastDeniedStateAndParams();
+    });
+    Then(function () {
+      expect(returnedLastDeniedStateAndParams).toEqual(lastDeniedStateAndParams);
+      expect(localStorageServiceMock.set).toHaveBeenCalledWith(cacheKeys.LAST_STATE, lastDeniedStateAndParams);
+
     });
   });
 
   describe('METHOD: _goToLogin', function () {
-    var passedFromStateName,
-      passedShowPopupLogin;
+    var passedFromStateName;
 
     When(function () {
-      pageGuardProvider.setupPages(fakePagesConfig);
+      securityEnforcerProvider.setupPages(fakePagesConfig);
 
-      pageGuard._goToLogin(passedFromStateName, passedShowPopupLogin);
+      securityEnforcer._goToLogin(passedFromStateName);
     });
 
     describe('if this is the first page after refresh', function () {
       Given(function () {
-        passedShowPopupLogin = true;
         passedFromStateName = '';
       });
 
@@ -318,33 +339,9 @@ describe("pageGuard", function () {
 
     });
 
-    describe('if trying to come from a different state', function () {
-      Given(function () {
-        passedFromStateName = FAKE_FROMSTATE_NAME;
-        fakePagesConfig.login = FAKE_FULLPAGE_LOGIN_STATE_NAME;
-        fakePagesConfig.loginPopup = FAKE_POPUP_LOGIN_STATE_NAME;
-      });
-      describe('if show popup is false', function () {
-        Given(function () {
-          passedShowPopupLogin = false;
-        });
-        Then(function () {
-          expect($state.go).toHaveBeenCalledWith(FAKE_FULLPAGE_LOGIN_STATE_NAME);
-        });
-      });
-      describe('if show popup is true', function () {
-        Given(function () {
-          passedShowPopupLogin = true;
-        });
-        Then(function () {
-          expect($state.go).toHaveBeenCalledWith(FAKE_POPUP_LOGIN_STATE_NAME);
-        });
-      });
-
-    });
   });
 
-  describe('METHOD: _isRouteApproved', function () {
+  describe('METHOD: _isPageApproved', function () {
     var securityControllerName,
       guardResponse,
       errorResponse,
@@ -352,12 +349,12 @@ describe("pageGuard", function () {
 
     Given(function () {
       fakePermissions = ['permission1', 'permission2'];
-      permissionsDaoMock.$deferred.getPermissions.resolve(fakePermissions);
+      permissionsDaoMock.$deferred.find.resolve(fakePermissions);
+      securityControllerName = 'mySecurityController';
     });
 
     When(function () {
-
-      pageGuard._isRouteApproved(securityControllerName)
+      securityEnforcer._isPageApproved(securityControllerName, fakeToParams)
         .then(
         function success(response) {
           guardResponse = response;
@@ -368,70 +365,89 @@ describe("pageGuard", function () {
       $rootScope.$apply();
     });
 
-    describe('call security controller', function () {
-
+    describe('should pass permissionsDao in context', function () {
+      var passedPermissions;
       Given(function () {
-        securityControllerName = 'mySecurityController';
+
+        $controllerProvider.register(securityControllerName, ctrl);
+
+        function ctrl(securityContext) {
+          console.log('securityContext.permissionsFetcher', securityContext.permissionsFetcher);
+          securityContext.permissionsDao
+            .find()
+            .then(function success(permissions){
+                    passedPermissions = permissions;
+                  });
+
+        }
       });
-
-      describe('should pass permissions in context', function () {
-        var passedPermissions;
-        Given(function () {
-          $controllerProvider.register(securityControllerName, ctrl);
-          function ctrl(securityContext) {
-            passedPermissions = securityContext.permissions;
-          }
-        });
-        Then(function () {
-          expect(passedPermissions).toEqual(fakePermissions);
-        });
+      Then(function () {
+        expect(passedPermissions).toEqual(fakePermissions);
       });
-
-      describe('when guard allows', function () {
-        Given(function () {
-          $controllerProvider.register(securityControllerName, ctrl);
-          function ctrl(securityContext) {
-            securityContext.guard.allow();
-          }
-        });
-
-        Then(function () {
-          expect(guardResponse).toBeDefined();
-          expect(guardResponse.answer).toBeTruthy();
-        });
-      });
-
-      describe('when guard denies with a different login state', function () {
-        var requestApprovalState;
-        Given(function () {
-          requestApprovalState = {name: 'differentState', params: {}};
-
-          $controllerProvider.register(securityControllerName, ctrl);
-          function ctrl(securityContext) {
-            securityContext.guard.deny(requestApprovalState);
-          }
-        });
-        Then(function () {
-          expect(guardResponse).toBeDefined();
-          expect(guardResponse.answer).toBeFalsy();
-          expect(guardResponse.requestApprovalState).toBe(requestApprovalState);
-
-        });
-      });
-
     });
+
+    describe('should pass toParams in context', function () {
+      var passedToParams;
+      Given(function () {
+        fakeToParams = {param: 'value'};
+
+        $controllerProvider.register(securityControllerName, ctrl);
+        function ctrl(securityContext) {
+          passedToParams = securityContext.toParams;
+        }
+      });
+      Then(function () {
+        expect(passedToParams).toEqual(fakeToParams);
+      });
+    });
+
+    describe('when guard allows', function () {
+      Given(function () {
+        $controllerProvider.register(securityControllerName, ctrl);
+        function ctrl(securityContext) {
+          securityContext.guard.allow();
+        }
+      });
+
+      Then(function () {
+        expect(guardResponse).toBeDefined();
+        expect(guardResponse.answer).toBeTruthy();
+      });
+    });
+
+    describe('when guard denies but supplies a different approval state', function () {
+      var requestApprovalState;
+      Given(function () {
+        requestApprovalState = {name: 'differentState', params: {}};
+
+        $controllerProvider.register(securityControllerName, ctrl);
+        function ctrl(securityContext) {
+          securityContext.guard.deny(requestApprovalState);
+        }
+      });
+      Then(function () {
+        expect(guardResponse).toBeDefined();
+        expect(guardResponse.answer).toBeFalsy();
+        expect(guardResponse.requestApprovalState).toBe(requestApprovalState);
+
+      });
+    });
+
+
 
   });
 
   describe('METHOD: goToPostLoginPage', function () {
     When(function () {
-      pageGuard.goToPostLoginPage();
+      securityEnforcer.goToPostLoginPage();
     });
     describe('when lastDeniedState is stored', function () {
       Given(function () {
-        pageGuard.setLastDeniedStateAndParams(fakeToState, fakeToParams);
+        securityEnforcer.setLastDeniedStateAndParams(fakeToState, fakeToParams);
       });
       Then(function () {
+        var lastState = securityEnforcer.getLastDeniedStateAndParams();
+        expect(lastState).toBeUndefined();
         expect($state.go).toHaveBeenCalledWith(FAKE_TOSTATE_NAME, fakeToParams);
       });
     });
@@ -448,11 +464,11 @@ describe("pageGuard", function () {
   });
 
   describe('METHOD: goToPostLogoutPage', function () {
-    Given(function(){
+    Given(function () {
       fakePagesConfig.postLogout = FAKE_POST_LOGOUT_STATE_NAME;
     });
     When(function () {
-      pageGuard.goToPostLogoutPage();
+      securityEnforcer.goToPostLogoutPage();
     });
 
     describe('if page is secured, go to post logout', function () {
@@ -470,9 +486,8 @@ describe("pageGuard", function () {
     });
 
     describe('if page is not secured, stay in the same page', function () {
-      Given(function(){
-        $state.current = {
-        }
+      Given(function () {
+        $state.current = {}
       });
       Then(function () {
         expect($state.go).not.toHaveBeenCalled();
@@ -480,7 +495,7 @@ describe("pageGuard", function () {
     });
 
     describe('if page is login, go to post logout', function () {
-      Given(function(){
+      Given(function () {
         fakePagesConfig.login = FAKE_FULLPAGE_LOGIN_STATE_NAME;
         $state.current = {
           name: FAKE_FULLPAGE_LOGIN_STATE_NAME
@@ -492,7 +507,7 @@ describe("pageGuard", function () {
     });
   });
 
-});
+})
 
 // make further requests with the token in header
 //$httpBackend.expectPOST(loginUrl, credentials, function(headers){

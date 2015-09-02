@@ -6,7 +6,7 @@ xdescribe("asRole directive", function () {
         element,
         ngSecured;
 
-	beforeEach(module("ngSecured",
+	beforeEach(module("ngSecured.directives",
                       "mocks.ngSecured"));
 
 	beforeEach(inject(["$rootScope",

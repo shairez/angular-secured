@@ -1,7 +1,7 @@
-describe("loginDao", function () {
+describe("loopback authAdapter", function () {
 
-  var loginDao,
-    loginDaoProvider,
+  var loopbackAdapter,
+    loopbackAdapterProvider,
     $rootScope,
     $log,
     $httpBackend,
@@ -9,21 +9,22 @@ describe("loginDao", function () {
     localStorageService,
     fakeToken,
     fakeMaxAge,
+    adapterConfig,
     defaultMaxAge;
 
-  beforeEach(module('ngSecured',
+  beforeEach(module('ngSecured.loopback',
                     'mocks.localStorageService',
                     providersSetter));
 
   providersSetter.$inject = [
-    'ngSecured.loginDaoProvider'
+    'ngSecured.authAdapterProvider'
   ];
-  function providersSetter(_loginDaoProvider) {
-    loginDaoProvider = _loginDaoProvider;
+  function providersSetter(_authAdapterProvider) {
+    loopbackAdapterProvider = _authAdapterProvider;
   }
 
   beforeEach(inject([
-    'ngSecured.loginDao',
+    'ngSecured.authAdapter',
     '$rootScope',
     '$log',
     'ngSecured.defaultStateNames',
@@ -31,7 +32,7 @@ describe("loginDao", function () {
     'localStorageService',
     '$httpBackend',
     '$http',
-    function (_loginDao,
+    function (_authAdapter,
               _$rootScope,
               _$log,
               _defaultStateNames,
@@ -43,7 +44,7 @@ describe("loginDao", function () {
       cacheKeys = _cacheKeys;
       localStorageService = _localStorageService;
       $httpBackend = _$httpBackend;
-      loginDao = _loginDao;
+      loopbackAdapter = _authAdapter;
     }]));
 
   beforeEach(function () {
@@ -53,10 +54,11 @@ describe("loginDao", function () {
 
   });
 
+
   describe('METHOD: Login', function () {
     var credentials;
     var loginUrl;
-    var loginConfig;
+
     var cacheExpiresIn;
     var loginPromise;
     var fakeLoginResponse;
@@ -70,14 +72,14 @@ describe("loginDao", function () {
       };
 
       cacheExpiresIn = 1209600;
-      loginConfig = {
+      adapterConfig = {
         loginUrl: loginUrl
       }
     });
 
     When(function () {
-      loginDaoProvider.setup(loginConfig);
-      loginPromise = loginDao.login(credentials);
+      loopbackAdapterProvider.setup(adapterConfig);
+      loginPromise = loopbackAdapter.login(credentials);
     });
 
     describe('Should post to the right url with the user credentials', function () {
@@ -91,8 +93,8 @@ describe("loginDao", function () {
 
     describe('Should cache response token', function () {
       Given(function () {
-        loginConfig.tokenAgeJsonPath = 'ttl';
-        loginConfig.tokenJsonPath = 'id';
+        adapterConfig.tokenAgeJsonPath = 'ttl';
+        adapterConfig.tokenJsonPath = 'id';
 
         $httpBackend.whenPOST(loginUrl, credentials).respond({
           id: fakeToken,
@@ -110,7 +112,7 @@ describe("loginDao", function () {
       describe('should reject the promise if cant find token', function () {
         var errorRespone;
         Given(function () {
-          loginConfig.tokenJsonPath = 'wrong.token';
+          adapterConfig.tokenJsonPath = 'wrong.token';
           $log.reset();
         });
         When(function () {
@@ -146,7 +148,7 @@ describe("loginDao", function () {
     var loggedIn;
 
     When(function () {
-      loggedIn = loginDao.isLoggedIn()
+      loggedIn = loopbackAdapter.isLoggedIn()
     });
 
     describe('When no token in cache, return false', function () {
@@ -171,23 +173,32 @@ describe("loginDao", function () {
 
   describe('METHOD: logout', function () {
 
-    When(function () {
-      loginDao.logout();
-    });
-
-    describe('should delete token from cache', function () {
-      Then(function () {
-        expect(localStorageService.remove).toHaveBeenCalledWith(cacheKeys.TOKEN);
-        expect(loginDao.getToken()).toBeUndefined();
-      });
-    });
-
-    describe('should delete token from memory', function () {
+    describe('should call logoutUrl if defined with the token and delete the token from memory and cache', function () {
+      var logoutUrl;
       Given(function () {
-        loginDao.setToken(123);
+
+        logoutUrl = '/logout';
+        adapterConfig = {
+          logoutUrl: logoutUrl
+        };
+
+        $httpBackend.expectPOST(logoutUrl, null, function(headers){
+          return headers['Authorization'] == fakeToken;
+        }).respond(true);
+
+        loopbackAdapter.setToken(fakeToken);
+        loopbackAdapterProvider.setup(adapterConfig);
+
       });
+
+      When(function () {
+        loopbackAdapter.logout();
+      });
+
       Then(function () {
-        expect(loginDao.getToken()).toBeUndefined();
+        $httpBackend.flush();
+        expect(localStorageService.remove).toHaveBeenCalledWith(cacheKeys.TOKEN);
+        expect(loopbackAdapter.getToken()).toBeUndefined();
       });
     });
   });
@@ -196,7 +207,7 @@ describe("loginDao", function () {
     var passedMaxAge;
 
     When(function () {
-      loginDao.setToken(fakeToken, passedMaxAge);
+      loopbackAdapter.setToken(fakeToken, passedMaxAge);
     });
 
     describe('Should cache the token with the passed maxAge', function () {
@@ -214,7 +225,7 @@ describe("loginDao", function () {
     var returnedToken;
 
     When(function () {
-      returnedToken = loginDao.getToken();
+      returnedToken = loopbackAdapter.getToken();
     });
 
     describe('should return cached token when no in memory token', function () {
@@ -231,7 +242,8 @@ describe("loginDao", function () {
     });
     describe('Should return in-memory token and not from cache when available', function () {
       Given(function () {
-        loginDao.setToken(fakeToken);
+        localStorageService.get.calls.reset();
+        loopbackAdapter.setToken(fakeToken);
       });
       Then(function () {
         expect(localStorageService.get).not.toHaveBeenCalled();
@@ -242,7 +254,3 @@ describe("loginDao", function () {
   });
 });
 
-// make further requests with the token in header
-//$httpBackend.expectPOST(loginUrl, credentials, function(headers){
-//  return headers['Authorization'] == 'test';
-//})

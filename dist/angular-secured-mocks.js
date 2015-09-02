@@ -1,4 +1,31 @@
-(function(){
+(function () {
+
+  angular
+    .module('mocks.ngSecured.loopback.authAdapter', [])
+    .provider('ngSecured.authAdapter', providerMock);
+
+  function providerMock(){
+    this.setup = jasmine.createSpy('authAdapter.setup');
+    this.$get = mockFactory;
+  }
+
+  function mockFactory($q) {
+    var mock = jasmine.createSpyObj('ngSecured.authAdapter',
+      ['login',
+       'isLoggedIn',
+       'logout',
+       'getToken',
+       'setToken']);
+
+    mock.$deferred = {
+      login: $q.defer()
+    }
+    mock.login.and.returnValue(mock.$deferred.login.promise);
+    return mock;
+  };
+
+})();
+;(function(){
 
 angular
   .module('mocks.localStorageService', [])
@@ -33,26 +60,26 @@ angular
 ;(function () {
 
   angular
-    .module('mocks.ngSecured.loginDao', [])
-    .provider('ngSecured.loginDao', providerMock);
+    .module('mocks.ngSecured.authAdapter', [])
+    .provider('ngSecured.authAdapter', providerMock);
 
   function providerMock(){
-    this.setup = jasmine.createSpy('loginDao.setup');
+    this.setup = jasmine.createSpy('authAdapter.setup');
     this.$get = mockFactory;
   }
 
   function mockFactory($q) {
-    var mock = jasmine.createSpyObj('ngSecured.loginDao',
+    var mock = jasmine.createSpyObj('ngSecured.authAdapter',
       ['login',
        'isLoggedIn',
-       'logout',
-       'getToken',
-       'setToken']);
+       'logout']);
 
     mock.$deferred = {
-      login: $q.defer()
+      login: $q.defer(),
+      logout: $q.defer()
     }
     mock.login.and.returnValue(mock.$deferred.login.promise);
+    mock.logout.and.returnValue(mock.$deferred.logout.promise);
     return mock;
   };
 
@@ -83,29 +110,6 @@ angular
 ;(function () {
 
   angular
-    .module('mocks.ngSecured.pageGuard', [])
-    .provider('ngSecured.pageGuard', providerMock);
-
-  function providerMock() {
-    this.setupPages = jasmine.createSpy('setupPages');
-    this.$get = mockFactory;
-  }
-
-  function mockFactory($q) {
-    var mock = jasmine.createSpyObj('ngSecured.pageGuard',
-      [
-        'init',
-        'goToPostLoginPage',
-        'goToPostLogoutPage'
-      ]);
-
-    return mock;
-  };
-
-})();
-;(function () {
-
-  angular
     .module('mocks.ngSecured.permissionsDao', [])
     .provider('ngSecured.permissionsDao', providerMock);
 
@@ -116,12 +120,62 @@ angular
 
   function mockFactory($q) {
     var mock = jasmine.createSpyObj('ngSecured.permissionsDao',
-      ['getPermissions']);
+      ['find',
+       'clear']);
 
     mock.$deferred = {
-      getPermissions: $q.defer()
+      find: $q.defer()
     }
-    mock.getPermissions.and.returnValue(mock.$deferred.getPermissions.promise);
+    mock.find.and.returnValue(mock.$deferred.find.promise);
+    return mock;
+  };
+
+})();
+;(function(){
+    angular
+      .module('mocks.ngSecured.securityContext',
+      ['mocks.ngSecured.permissionsDao'])
+      .factory('ngSecured.securityContext', srv);
+
+  srv.$inject = ['ngSecured.permissionsDao'];
+  function srv(permissionsDaoMock){
+    var mockFactory;
+
+    var securityGuardMock = jasmine.createSpyObj('ngSecured.securityGuard', [
+      'allow',
+      'deny'
+    ]);
+
+    mockFactory = function(toParams){
+      return {
+        permissionsDao: permissionsDaoMock,
+        toParams: toParams || {},
+        guard: securityGuardMock
+      }
+    }
+
+    return mockFactory;
+  }
+})();
+;(function () {
+
+  angular
+    .module('mocks.ngSecured.securityEnforcer', [])
+    .provider('ngSecured.securityEnforcer', providerMock);
+
+  function providerMock() {
+    this.setupPages = jasmine.createSpy('setupPages');
+    this.$get = mockFactory;
+  }
+
+  function mockFactory($q) {
+    var mock = jasmine.createSpyObj('ngSecured.securityEnforcer',
+      [
+        'init',
+        'goToPostLoginPage',
+        'goToPostLogoutPage'
+      ]);
+
     return mock;
   };
 

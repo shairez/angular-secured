@@ -7,22 +7,22 @@
   provider.$inject = [
     'localStorageServiceProvider',
     '$httpProvider',
-    'ngSecured.loginDaoProvider',
+    'ngSecured.authAdapterProvider',
     'ngSecured.permissionsDaoProvider',
-    'ngSecured.pageGuardProvider'
+    'ngSecured.securityEnforcerProvider'
   ];
 
   function provider(localStorageServiceProvider,
                     $httpProvider,
-                    loginDaoProvider,
+                    authAdapterProvider,
                     permissionsDaoProvider,
-                    pageGuardProvider) {
+                    securityEnforcerProvider) {
 
     var config = {
-      tokenAgeJsonPath: '',
-      tokenJsonPath: '',
-      loginUrl: '',
-      permissionsUrl: '',
+      adapterOptions: {},
+      permissions: {
+        url: ''
+      },
       pages: {
         login: 'ngSecured.login',
         loginPopup: null,
@@ -36,21 +36,22 @@
     this.secure = function (userConfig) {
       angular.extend(config, userConfig);
       localStorageServiceProvider.setPrefix('ngSecured');
-
-      loginDaoProvider.setup(config);
-      permissionsDaoProvider.setup(config);
-      pageGuardProvider.setupPages(config.pages);
+      //authAdapterProvider.setup(config.adapterOptions);
+      permissionsDaoProvider.setup(config.permissions);
+      securityEnforcerProvider.setupPages(config.pages);
     };
 
     this.$get = factory;
 
     factory.$inject = [
-      'ngSecured.loginDao',
-      'ngSecured.pageGuard'
+      'ngSecured.authAdapter',
+      'ngSecured.permissionsDao',
+      'ngSecured.securityEnforcer'
     ];
 
-    function factory(loginDao,
-                     pageGuard) {
+    function factory(authAdapter,
+                     permissionsDao,
+                     securityEnforcer) {
 
       var ngSecured = {};
 
@@ -59,23 +60,24 @@
       ngSecured.isLoggedIn = isLoggedIn;
 
       function login(credentials) {
-        return loginDao
+        return authAdapter
           .login(credentials)
           .then(success);
 
         function success(response) {
-          pageGuard.goToPostLoginPage();
+          securityEnforcer.goToPostLoginPage();
           return response;
         }
       }
 
       function logout() {
-        loginDao.logout();
-        pageGuard.goToPostLogoutPage();
+        authAdapter.logout();
+        permissionsDao.clear();
+        securityEnforcer.goToPostLogoutPage();
       }
 
       function isLoggedIn() {
-        return loginDao.isLoggedIn();
+        return authAdapter.isLoggedIn();
       }
 
       return ngSecured;

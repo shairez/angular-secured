@@ -11,12 +11,13 @@
 
   function mockFactory($q) {
     var mock = jasmine.createSpyObj('ngSecured.permissionsDao',
-      ['getPermissions']);
+      ['find',
+       'clear']);
 
     mock.$deferred = {
-      getPermissions: $q.defer()
+      find: $q.defer()
     }
-    mock.getPermissions.and.returnValue(mock.$deferred.getPermissions.promise);
+    mock.find.and.returnValue(mock.$deferred.find.promise);
     return mock;
   };
 

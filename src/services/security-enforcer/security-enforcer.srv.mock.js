@@ -1,8 +1,8 @@
 (function () {
 
   angular
-    .module('mocks.ngSecured.pageGuard', [])
-    .provider('ngSecured.pageGuard', providerMock);
+    .module('mocks.ngSecured.securityEnforcer', [])
+    .provider('ngSecured.securityEnforcer', providerMock);
 
   function providerMock() {
     this.setupPages = jasmine.createSpy('setupPages');
@@ -10,7 +10,7 @@
   }
 
   function mockFactory($q) {
-    var mock = jasmine.createSpyObj('ngSecured.pageGuard',
+    var mock = jasmine.createSpyObj('ngSecured.securityEnforcer',
       [
         'init',
         'goToPostLoginPage',

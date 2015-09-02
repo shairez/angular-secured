@@ -1,16 +1,16 @@
 (function () {
 
   angular
-    .module('mocks.ngSecured.loginDao', [])
-    .provider('ngSecured.loginDao', providerMock);
+    .module('mocks.ngSecured.loopback.authAdapter', [])
+    .provider('ngSecured.authAdapter', providerMock);
 
   function providerMock(){
-    this.setup = jasmine.createSpy('loginDao.setup');
+    this.setup = jasmine.createSpy('authAdapter.setup');
     this.$get = mockFactory;
   }
 
   function mockFactory($q) {
-    var mock = jasmine.createSpyObj('ngSecured.loginDao',
+    var mock = jasmine.createSpyObj('ngSecured.authAdapter',
       ['login',
        'isLoggedIn',
        'logout',

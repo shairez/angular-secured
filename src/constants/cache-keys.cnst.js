@@ -1,7 +1,11 @@
-angular.module('ngSecured')
+(function () {
+
+  angular.module('ngSecured.services')
     .constant('ngSecured.cacheKeys', {
-        LOGIN_CACHE: 'loginCache',
-        TOKEN: 'token',
-        PERMISSIONS_CACHE: 'permissionsCache',
-        PERMISSIONS: 'permissions'
-    })
+      TOKEN: 'token',
+      LAST_STATE: 'lastState',
+      PERMISSIONS_CACHE: 'permissionsCache',
+      PERMISSIONS: 'permissions'
+    });
+
+})();

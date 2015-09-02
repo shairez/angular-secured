@@ -1,4 +1,4 @@
-angular.module("ngSecured")
+angular.module("ngSecured.directives")
 .directive("asRole", ["ngSecured", "$animate",
                        function(ngSecured, $animate){
         return {

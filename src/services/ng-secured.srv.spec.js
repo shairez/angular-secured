@@ -5,18 +5,20 @@ describe("ngSecured", function () {
     $state,
     $rootScope,
     $stateProvider,
+    permissionsDaoMock,
     $q,
     $http,
     $httpBackend,
     defaultStateNames,
     cacheOptions,
-    loginDaoMock,
-    pageGuardMock;
+    authAdapterMock,
+    securityEnforcerMock;
 
 
   beforeEach(module('ngSecured',
-                    'mocks.ngSecured.pageGuard',
-                    'mocks.ngSecured.loginDao',
+                    'mocks.ngSecured.securityEnforcer',
+                    'mocks.ngSecured.authAdapter',
+                    'mocks.ngSecured.permissionsDao',
                     providersSetter));
 
   providersSetter.$inject = [
@@ -35,8 +37,9 @@ describe("ngSecured", function () {
                      'ngSecured.cacheOptions',
                      '$httpBackend',
                      '$http',
-                     'ngSecured.loginDao',
-                     'ngSecured.pageGuard',
+                     'ngSecured.permissionsDao',
+                     'ngSecured.authAdapter',
+                     'ngSecured.securityEnforcer',
                      function (_ngSecured,
                                _$state,
                                _$rootScope,
@@ -45,8 +48,9 @@ describe("ngSecured", function () {
                                _cacheOptions,
                                _$httpBackend,
                                _$http,
-                               _loginDao,
-                               _pageGuard) {
+                               _permissionsDao,
+                               _authAdapter,
+                               _securityEnforcer) {
                        ngSecured = _ngSecured;
                        $state = _$state;
                        $rootScope = _$rootScope;
@@ -55,8 +59,9 @@ describe("ngSecured", function () {
                        cacheOptions = _cacheOptions;
                        $httpBackend = _$httpBackend;
                        $http = _$http;
-                       loginDaoMock = _loginDao;
-                       pageGuardMock = _pageGuard;
+                       permissionsDaoMock = _permissionsDao;
+                       authAdapterMock = _authAdapter;
+                       securityEnforcerMock = _securityEnforcer;
                      }]));
 
 
@@ -70,7 +75,7 @@ describe("ngSecured", function () {
         password: '1234'
       }
 
-      loginDaoMock.$deferred.login.resolve(true);
+      authAdapterMock.$deferred.login.resolve(true);
     });
 
     When(function () {
@@ -83,8 +88,8 @@ describe("ngSecured", function () {
       $rootScope.$apply();
     });
     Then(function () {
-      expect(loginDaoMock.login).toHaveBeenCalledWith(credentials);
-      expect(pageGuardMock.goToPostLoginPage).toHaveBeenCalled();
+      expect(authAdapterMock.login).toHaveBeenCalledWith(credentials);
+      expect(securityEnforcerMock.goToPostLoginPage).toHaveBeenCalled();
     });
   });
 
@@ -93,14 +98,15 @@ describe("ngSecured", function () {
       ngSecured.logout();
     });
     Then(function(){
-      expect(loginDaoMock.logout).toHaveBeenCalled();
-      expect(pageGuardMock.goToPostLogoutPage).toHaveBeenCalled();
+      expect(authAdapterMock.logout).toHaveBeenCalled();
+      expect(permissionsDaoMock.clear).toHaveBeenCalled();
+      expect(securityEnforcerMock.goToPostLogoutPage).toHaveBeenCalled();
     });
   });
 
   describe('METHOD: isLoggedIn', function () {
     Given(function(){
-      loginDaoMock.isLoggedIn.and.returnValue(true);
+      authAdapterMock.isLoggedIn.and.returnValue(true);
     });
     When(function(){
       loggedIn = ngSecured.isLoggedIn();

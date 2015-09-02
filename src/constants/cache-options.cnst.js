@@ -1,4 +1,4 @@
-angular.module("ngSecured")
+angular.module("ngSecured.services")
     .constant("ngSecured.cacheOptions", {
         "timeout": {
             "FOREVER": "forever"

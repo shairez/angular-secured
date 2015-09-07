@@ -4,9 +4,9 @@
   "main": "index.js",
   "dependencies": {},
   "peerDependencies": {
-    "angular": "1.4.0",
-    "angular-ui-router": "0.2.15",
-    "angular-local-storage": "0.2.2"
+    "angular": "~1.4.0",
+    "angular-ui-router": "~0.2.15",
+    "angular-local-storage": "~0.2.2"
   },
   "devDependencies": {
     "grunt": "~0.4.1",

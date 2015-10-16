@@ -173,7 +173,8 @@
     '$httpProvider',
     'ngSecured.authAdapterProvider',
     'ngSecured.permissionsDaoProvider',
-    'ngSecured.securityEnforcerProvider'
+    'ngSecured.securityEnforcerProvider',
+    '$windowProvider'
   ];
 
   function provider(localStorageServiceProvider,

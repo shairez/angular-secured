@@ -16,7 +16,8 @@
                     $httpProvider,
                     authAdapterProvider,
                     permissionsDaoProvider,
-                    securityEnforcerProvider) {
+                    securityEnforcerProvider,
+                    $windowProvider) {
 
     var config = {
       adapterOptions: {},
@@ -35,11 +36,16 @@
 
     this.secure = function (userConfig) {
       angular.extend(config, userConfig);
-      localStorageServiceProvider.setPrefix('ngSecured');
+      localStorageServiceProvider.setPrefix('ngSecured_'+ getAppPath() + '_');
       //authAdapterProvider.setup(config.adapterOptions);
       permissionsDaoProvider.setup(config.permissions);
       securityEnforcerProvider.setupPages(config.pages);
     };
+
+    function getAppPath(){
+      var $window = $windowProvider.$get();
+      return $window.location.pathname;
+    }
 
     this.$get = factory;
 

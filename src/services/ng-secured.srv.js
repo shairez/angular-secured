@@ -37,16 +37,16 @@
 
     this.secure = function (userConfig) {
       angular.extend(config, userConfig);
-      localStorageServiceProvider.setPrefix('ngSecured_'+ getAppPath() + '_');
+
+      if (!userConfig.cachePrefix){
+        throw new Error('You must configure a cachePrefix');
+      }
+      localStorageServiceProvider.setPrefix('ngSecured_'+ userConfig.cachePrefix + '_');
+
       //authAdapterProvider.setup(config.adapterOptions);
       permissionsDaoProvider.setup(config.permissions);
       securityEnforcerProvider.setupPages(config.pages);
     };
-
-    function getAppPath(){
-      var $window = $windowProvider.$get();
-      return $window.location.pathname;
-    }
 
     this.$get = factory;
 

@@ -102,6 +102,7 @@ describe("securityEnforcer", function () {
     fakeFromState = {name: FAKE_FROMSTATE_NAME};
 
     fakePagesConfig = {};
+    
 
   });
 
@@ -438,9 +439,38 @@ describe("securityEnforcer", function () {
   });
 
   describe('METHOD: goToPostLoginPage', function () {
-    When(function () {
-      securityEnforcer.goToPostLoginPage();
+    var fakeOptions;
+    Given(function () {
+      fakeOptions = {};
+      
     });
+    
+    When(function () {
+      securityEnforcer.goToPostLoginPage(fakeOptions);
+    });
+
+    describe('if custom post login passed', function () {
+      Given(function(){
+        fakeOptions.customPostLoginPage = 'app.customPostLogin';
+      });
+
+      Then(function(){
+        expect($state.go).toHaveBeenCalledWith(fakeOptions.customPostLoginPage);
+      });
+      
+    });
+
+    describe('if doNotGoToPostLogin is true', function () {
+      Given(function(){
+        fakeOptions.doNotGoToPostLogin = true;
+      });
+
+      Then(function(){
+        expect($state.go).not.toHaveBeenCalled();
+      });
+      
+    });
+
     describe('when lastDeniedState is stored', function () {
       Given(function () {
         securityEnforcer.setLastDeniedStateAndParams(fakeToState, fakeToParams);

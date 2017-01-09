@@ -230,13 +230,13 @@
       ngSecured.logout = logout;
       ngSecured.isLoggedIn = isLoggedIn;
 
-      function login(credentials) {
+      function login(credentials, options) {
         return authAdapter
           .login(credentials)
           .then(success);
 
         function success(response) {
-          securityEnforcer.goToPostLoginPage();
+          securityEnforcer.goToPostLoginPage(options);
           return response;
         }
       }
@@ -369,7 +369,7 @@
   ];
 
   function provider($stateProvider,
-                    defaultStateNames) {
+    defaultStateNames) {
 
     var pages = {
       login: defaultStateNames.LOGIN,
@@ -381,16 +381,41 @@
     (function configureDefaultStates() {
 
       $stateProvider.state(defaultStateNames.BASE_STATE, {});
-      $stateProvider.state(defaultStateNames.NOT_AUTHENTICATED,
-        {views: {"@": {template: "please login to see this page."}}});
-      $stateProvider.state(defaultStateNames.NOT_AUTHORIZED,
-        {views: {"@": {template: "You are not .authorized to see this page."}}});
-      $stateProvider.state(defaultStateNames.LOGIN,
-        {views: {'@': {template: 'Please configure a login state'}}});
-      $stateProvider.state(defaultStateNames.POST_LOGIN,
-        {views: {'@': {template: 'Please configure a post logout state'}}});
-      $stateProvider.state(defaultStateNames.POST_LOGOUT,
-        {views: {'@': {template: 'Please configure a post login state'}}});
+      $stateProvider.state(defaultStateNames.NOT_AUTHENTICATED, {
+        views: {
+          "@": {
+            template: "please login to see this page."
+          }
+        }
+      });
+      $stateProvider.state(defaultStateNames.NOT_AUTHORIZED, {
+        views: {
+          "@": {
+            template: "You are not .authorized to see this page."
+          }
+        }
+      });
+      $stateProvider.state(defaultStateNames.LOGIN, {
+        views: {
+          '@': {
+            template: 'Please configure a login state'
+          }
+        }
+      });
+      $stateProvider.state(defaultStateNames.POST_LOGIN, {
+        views: {
+          '@': {
+            template: 'Please configure a post logout state'
+          }
+        }
+      });
+      $stateProvider.state(defaultStateNames.POST_LOGOUT, {
+        views: {
+          '@': {
+            template: 'Please configure a post login state'
+          }
+        }
+      });
     })();
 
 
@@ -414,16 +439,17 @@
       'ngSecured.authAdapter',
       'ngSecured.permissionsDao'
     ];
+
     function factory($rootScope,
-                     $q,
-                     $parse,
-                     $log,
-                     $controller,
-                     $state,
-                     localStorageService,
-                     cacheKeys,
-                     authAdapter,
-                     permissionsDao) {
+      $q,
+      $parse,
+      $log,
+      $controller,
+      $state,
+      localStorageService,
+      cacheKeys,
+      authAdapter,
+      permissionsDao) {
 
       var lastDeniedStateAndParams,
         skipNextSecurityCheck;
@@ -460,6 +486,7 @@
         if (pages.postLogout === defaultStateNames.POST_LOGOUT) {
           warnAboutState('postLogout');
         }
+
         function warnAboutState(stateType) {
           $log.error('In ngSecuredProvider.secure, you need to set the page name of "' + stateType + '"');
         }
@@ -577,8 +604,7 @@
           return;
         }
 
-        function SecurityGuard() {
-        }
+        function SecurityGuard() {}
 
         SecurityGuard.prototype.allow = function () {
           response.answer = true;
@@ -605,10 +631,20 @@
         return deferred.promise;
       }
 
-      function goToPostLoginPage() {
+      function goToPostLoginPage(options) {
         var lastStateName,
           lastStateParams;
-        if (lastDeniedStateAndParams) {
+        
+        options = options ? options : {};
+
+        if (options.doNotGoToPostLogin) {
+          return;
+        }
+        
+        if (options && options.customPostLoginPage) {
+          $state.go(options.customPostLoginPage);
+
+        } else if (lastDeniedStateAndParams) {
           lastStateName = lastDeniedStateAndParams.state.name;
           lastStateParams = lastDeniedStateAndParams.params;
           removeLastDeniedStateAndParams();

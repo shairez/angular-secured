@@ -67,7 +67,8 @@ describe("ngSecured", function () {
 
   describe('METHOD: login', function () {
     var credentials,
-      returnedResponse;
+      returnedResponse,
+      fakeOptions;
 
     Given(function () {
       credentials = {
@@ -75,22 +76,44 @@ describe("ngSecured", function () {
         password: '1234'
       }
 
+      fakeOptions = {};
+
       authAdapterMock.$deferred.login.resolve(true);
     });
 
     When(function () {
       ngSecured
-        .login(credentials)
+        .login(credentials, fakeOptions)
         .then(
         function success(response) {
           returnedResponse = response;
         });
       $rootScope.$apply();
     });
+
     Then(function () {
       expect(authAdapterMock.login).toHaveBeenCalledWith(credentials);
-      expect(securityEnforcerMock.goToPostLoginPage).toHaveBeenCalled();
     });
+
+    describe('if no options', function () {
+      Then(function () {
+        expect(securityEnforcerMock.goToPostLoginPage).toHaveBeenCalled();
+      });
+    });
+
+    describe('if custom opions is present', function () {
+      Given(function(){
+        fakeOptions = {
+          postLoginPage: 'app.customPostLogin'
+        }
+      });
+      
+      Then(function () {
+        expect(securityEnforcerMock.goToPostLoginPage).toHaveBeenCalledWith(fakeOptions);
+      });
+    });
+    
+    
   });
 
   describe('METHOD: logout', function () {

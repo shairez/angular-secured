@@ -66,13 +66,13 @@
       ngSecured.logout = logout;
       ngSecured.isLoggedIn = isLoggedIn;
 
-      function login(credentials) {
+      function login(credentials, options) {
         return authAdapter
           .login(credentials)
           .then(success);
 
         function success(response) {
-          securityEnforcer.goToPostLoginPage();
+          securityEnforcer.goToPostLoginPage(options);
           return response;
         }
       }
